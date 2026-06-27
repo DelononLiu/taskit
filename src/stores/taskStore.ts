@@ -46,7 +46,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
   loadLayers: async (taskId, framework) => {
     const fw = framework || get().selectedFramework
-    const layers = await getTaskLayers(taskId, fw)
+    const { layers } = await getTaskLayers(taskId, fw)
     set({ layers })
   },
 

@@ -61,6 +61,62 @@ def snr(a, b):
     return float(10 * math.log10(signal / noise))
 
 
+# ── 逐维余弦 ──
+
+def per_dim_cosine_stats(a, b, max_buckets=10):
+    """
+    沿最后一个维度（通常是 hidden / channel 维）逐条算余弦，
+    返回统计摘要，包含 min / max / mean 和直方图 buckets。
+    只对 2D+ tensor 且非退化维度有意义。
+    """
+    a_f = a.astype(np.float64)
+    b_f = b.astype(np.float64)
+    ndim = a_f.ndim
+
+    if ndim < 2:
+        return None  # 1D tensor 没必要逐维
+
+    # 沿最后一个轴切分
+    axis = -1
+    n_slices = a_f.shape[axis]
+    if n_slices < 2 or n_slices > 10000:
+        return None  # 太少的切片没统计意义，太多数据量过大
+
+    # 将切分轴移到前面，然后 flatten 剩余维
+    a_moved = np.moveaxis(a_f, axis, 0).reshape(n_slices, -1)
+    b_moved = np.moveaxis(b_f, axis, 0).reshape(n_slices, -1)
+
+    # 向量化算余弦
+    dots = np.sum(a_moved * b_moved, axis=1)
+    na = np.linalg.norm(a_moved, axis=1)
+    nb = np.linalg.norm(b_moved, axis=1)
+    mask = (na > 1e-12) & (nb > 1e-12)
+    cosines = np.where(mask, dots / (na * nb), 1.0)
+
+    if len(cosines) == 0:
+        return None
+
+    # 直方图 buckets
+    lo, hi = float(cosines.min()), float(cosines.max())
+    if hi - lo < 1e-8:
+        # 所有值几乎一样
+        hist = [{"lo": lo, "hi": hi, "count": len(cosines)}]
+    else:
+        edges = np.linspace(lo, hi, max_buckets + 1)
+        counts, _ = np.histogram(cosines, bins=edges)
+        hist = [
+            {"lo": round(float(edges[i]), 6), "hi": round(float(edges[i + 1]), 6), "count": int(counts[i])}
+            for i in range(max_buckets) if counts[i] > 0
+        ]
+
+    return {
+        "min": round(float(cosines.min()), 8),
+        "max": round(float(cosines.max()), 8),
+        "mean": round(float(cosines.mean()), 8),
+        "histogram": hist,
+    }
+
+
 # ── 加载 runner 输出 ──
 
 def load_runner_outputs(runner_dir: str):
@@ -99,6 +155,11 @@ def compute_metrics(baseline_val, target_val, framework_id: str, threshold=0.95)
         "snr": round(snr(baseline_val, target_val), 4),
         "passed": cos >= threshold,
     }
+    # 全局余弦不为 1.0 时，补充逐维余弦统计
+    if cos < 0.999999:
+        dim_stats = per_dim_cosine_stats(baseline_val, target_val)
+        if dim_stats is not None:
+            metric["dimCosineStats"] = dim_stats
     return metric
 
 
@@ -158,6 +219,23 @@ def compare(baseline_dir: str, target_dir: str, framework_id: str = "onnx_int8",
     all_cos = [m["cosineSimilarity"] for l in layers for m in l["metrics"]]
     all_err = [m["maxAbsError"] for l in layers for m in l["metrics"]]
 
+    # ── 合并计算图（从 baseline runner_outputs 读取 graph.json）──
+    graph_data = None
+    graph_path = os.path.join(baseline_dir, "graph.json")
+    if os.path.exists(graph_path):
+        try:
+            with open(graph_path) as f:
+                graph_data = json.load(f)
+            # 构建 layer_name → cosine 的快速查找
+            cos_lookup = {}
+            for l in layers:
+                if l["metrics"]:
+                    cos_lookup[l["layerName"]] = l["metrics"][0]["cosineSimilarity"]
+            for node in graph_data.get("nodes", []):
+                node["cosineSimilarity"] = cos_lookup.get(node["name"], None)
+        except Exception as e:
+            print(f"[compare] graph annotation skipped: {e}")
+
     output = {
         "overall": {
             "totalLayers": total,
@@ -170,6 +248,8 @@ def compare(baseline_dir: str, target_dir: str, framework_id: str = "onnx_int8",
         },
         "layers": layers,
     }
+    if graph_data:
+        output["graph"] = graph_data
 
     return output
 

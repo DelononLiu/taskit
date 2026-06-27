@@ -21,7 +21,9 @@ router.get('/modules/model_diff/tasks/:id/layers', async (req: Request, res: Res
       })).filter((layer: any) => layer.metrics.length > 0)
     }
 
-    res.json({ layers })
+    const graph = data.graph ?? null
+
+    res.json({ layers, graph })
   } catch (e: any) {
     res.status(500).json({ error: e.message })
   }

@@ -1,6 +1,6 @@
 import { api } from './client'
 import { mockApi } from './mock/handlers'
-import type { CreateTaskParams, ComparisonTask, LayerDiff } from '@/types'
+import type { CreateTaskParams, ComparisonTask, LayerDiff, LayersResponse } from '@/types'
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
 
@@ -63,16 +63,17 @@ export async function getTask(taskId: string): Promise<ComparisonTask> {
   }
 }
 
-export async function getTaskLayers(taskId: string, framework?: string): Promise<LayerDiff[]> {
+export async function getTaskLayers(taskId: string, framework?: string): Promise<LayersResponse> {
   if (USE_MOCK) {
-    return mockApi.getTaskLayers(taskId, framework)
+    const layers = await mockApi.getTaskLayers(taskId, framework)
+    return { layers, graph: null }
   }
 
   const qs = framework ? `?framework=${framework}` : ''
   const resp: any = await api.get(`/modules/model_diff/tasks/${taskId}/layers${qs}`, {
     headers: authHeaders(),
   })
-  return resp.layers || []
+  return { layers: resp.layers || [], graph: resp.graph ?? null }
 }
 
 export async function getTaskHistory(page = 1, limit = 20): Promise<any[]> {

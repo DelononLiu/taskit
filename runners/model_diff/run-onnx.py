@@ -53,6 +53,101 @@ def get_node_shape_info(model, node):
     return input_shapes, output_shapes
 
 
+# ── 计算图提取 ──
+
+def extract_graph(model, sampled_nodes, model_output_names):
+    """
+    从 ONNX 模型提取 DAG 结构：nodes（含 depth）+ edges。
+    sampled_nodes: [(idx, node)] 已采样的节点列表
+    model_output_names: session.get_outputs() 的原始输出名列表
+    返回: {"nodes": [...], "edges": [...], "outputs": [...]}
+    """
+    # 构建 tensor → node 映射
+    tensor_to_node = {}
+    for node in model.graph.node:
+        for out in node.output:
+            if out:
+                tensor_to_node[out] = node
+
+    # 构建输入 tensor → 来源 node 的反向映射
+    input_to_node = {}
+    for node in model.graph.node:
+        for inp in node.input:
+            if inp and inp not in input_to_node:
+                input_to_node[inp] = node
+
+    # 只保留采样节点
+    sampled_names = {node.name or f"{node.op_type}_{idx}" for idx, node in sampled_nodes}
+
+    # 构建邻接表
+    node_map = {}  # name → {name, opType, depth, idx}
+    adj = {}  # name → [child names]
+    rev_adj = {}  # name → [parent names]
+
+    for idx, node in sampled_nodes:
+        name = node.name or f"{node.op_type}_{idx}"
+        node_map[name] = {"name": name, "opType": node.op_type, "idx": idx}
+        adj[name] = []
+        rev_adj[name] = []
+
+    # 边：如果采样节点 B 的某个输入 tensor 是采样节点 A 的输出，则有 A→B
+    tensor_to_sampled = {}
+    for idx, node in sampled_nodes:
+        name = node.name or f"{node.op_type}_{idx}"
+        for out in node.output:
+            if out:
+                tensor_to_sampled[out] = name
+
+    # 再扫一遍采样节点，找入边
+    for idx, node in sampled_nodes:
+        name = node.name or f"{node.op_type}_{idx}"
+        for inp in node.input:
+            if inp in tensor_to_sampled:
+                src = tensor_to_sampled[inp]
+                if src != name:
+                    adj[src].append(name)
+                    rev_adj[name].append(src)
+
+    # 拓扑深度：从没有入边的节点开始 BFS
+    in_deg = {n: len(rev_adj[n]) for n in node_map}
+    queue = [n for n, d in in_deg.items() if d == 0]
+    depth = {n: 0 for n in queue}
+    while queue:
+        cur = queue.pop(0)
+        for child in adj[cur]:
+            in_deg[child] -= 1
+            depth[child] = max(depth.get(child, 0), depth[cur] + 1)
+            if in_deg[child] == 0:
+                queue.append(child)
+
+    # 构建 edges list
+    edges = []
+    for src in adj:
+        for dst in adj[src]:
+            edges.append({"from": src, "to": dst})
+
+    # 找哪些采样节点直接输出到模型输出（leaf nodes）
+    leaf_names = set()
+    for idx, node in sampled_nodes:
+        name = node.name or f"{node.op_type}_{idx}"
+        for out in node.output:
+            if out and any(out == mo or out in model_output_names for mo in model_output_names):
+                leaf_names.add(name)
+                break
+
+    nodes_out = []
+    for n in node_map.values():
+        nodes_out.append({
+            "name": n["name"],
+            "opType": n["opType"],
+            "depth": depth.get(n["name"], 0),
+            "isLeaf": n["name"] in leaf_names,
+        })
+    nodes_out.sort(key=lambda x: (x["depth"], x["name"]))
+
+    return {"nodes": nodes_out, "edges": edges, "outputs": model_output_names}
+
+
 # ── 主逻辑 ──
 
 def run_task(task_dir: str):
@@ -138,6 +233,17 @@ def run_task(task_dir: str):
         layer_nodes = [layer_nodes[i] for i in set(indices)]
         layer_nodes.sort(key=lambda x: x[0])
         print(f"[run] sampled to {len(layer_nodes)} layers")
+
+    # ── 提取计算图 ──
+    try:
+        graph_data = extract_graph(model, layer_nodes, orig_outputs)
+        meta_out = os.path.join(task_dir, "runner_outputs")
+        os.makedirs(meta_out, exist_ok=True)
+        with open(os.path.join(meta_out, "graph.json"), "w") as f:
+            json.dump(graph_data, f, indent=2)
+        print(f"[run] graph extracted: {len(graph_data['nodes'])} nodes, {len(graph_data['edges'])} edges")
+    except Exception as e:
+        print(f"[run] graph extraction skipped: {e}")
 
     # 添加中间层为 graph output
     import copy

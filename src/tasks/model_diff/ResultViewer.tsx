@@ -9,7 +9,8 @@ import { cn } from '@/lib/utils'
 import { getTask, getTaskLayers } from '@/api/task'
 import { OverviewChart } from '@/pages/TaskDetail/OverviewChart'
 import { LayerTable } from '@/pages/TaskDetail/LayerTable'
-import type { ComparisonTask, LayerDiff, LayerMetric } from '@/types'
+import { ExecutionTree } from './ExecutionTree'
+import type { ComparisonTask, LayerDiff, LayerMetric, GraphData } from '@/types'
 import { formatSize, extractArch, mockParams } from './utils'
 import { MOCK_LAYERS_ALL_PASS, MOCK_LAYERS_HAS_FAIL, buildMockTask } from './mockData'
 import { TaskHistoryDrawer } from '@/core/components/TaskHistoryDrawer'
@@ -29,6 +30,7 @@ const FW_OPTIONS = [
 export function ModelDiffResult({ taskId, onNewTask }: Props) {
   const [task, setTask] = useState<ComparisonTask | null>(null)
   const [layers, setLayers] = useState<LayerDiff[]>([])
+  const [graphData, setGraphData] = useState<GraphData | null>(null)
   const [layersLoading, setLayersLoading] = useState(true)
   const [selectedFramework, setSelectedFramework] = useState('tensorrt')
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null)
@@ -66,8 +68,9 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
     try {
       const t = await getTask(tid)
       setTask(t)
-      const rawLayers = await getTaskLayers(tid)
+      const { layers: rawLayers, graph: g } = await getTaskLayers(tid)
       setLayers(rawLayers)
+      setGraphData(g)
       // Auto-select first framework that has metrics data
       const fwSet = new Set<string>()
       rawLayers.forEach((l: LayerDiff) => l.metrics?.forEach((m: LayerMetric) => fwSet.add(m.frameworkId)))
@@ -205,6 +208,17 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
               selectedLayerName={selectedLayer}
             />
           </div>
+
+          {/* Execution Tree */}
+          {graphData && (
+            <div className="pt-2">
+              <ExecutionTree
+                graph={graphData}
+                onSelectLayer={(name) => setSelectedLayer(name)}
+                selectedLayer={selectedLayer}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right panel */}
@@ -255,6 +269,34 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
                         )
                       })}
                     </div>
+
+                    {/* 逐维余弦分布 */}
+                    {m.dimCosineStats && (
+                      <div className="col-span-2 mt-1 p-2 rounded-md border border-muted bg-muted/20">
+                        <div className="text-muted-foreground text-[10px] mb-1.5 font-medium">逐维余弦分布</div>
+                        <div className="flex items-center gap-3 text-xs mb-2">
+                          <span>min: <span className="font-mono text-fail">{m.dimCosineStats.min.toFixed(6)}</span></span>
+                          <span>mean: <span className="font-mono" style={{ color: m.dimCosineStats.mean >= 0.99 ? '#22c55e' : '#ef4444' }}>{m.dimCosineStats.mean.toFixed(6)}</span></span>
+                          <span>max: <span className="font-mono text-pass">{m.dimCosineStats.max.toFixed(6)}</span></span>
+                        </div>
+                        <div className="flex items-end gap-[2px] h-8">
+                          {m.dimCosineStats.histogram.map((bucket, bi) => {
+                            const isGood = bucket.lo >= 0.99
+                            const total = m.dimCosineStats!.histogram.reduce((s, b) => s + b.count, 0)
+                            const pct = total > 0 ? bucket.count / total : 0
+                            return (
+                              <div key={bi} className="flex-1 flex flex-col items-center gap-0.5">
+                                <div className="w-full rounded-sm transition-all" style={{
+                                  height: `${Math.max(4, pct * 64)}px`,
+                                  background: isGood ? '#22c55e' : '#ef4444',
+                                  opacity: isGood ? 0.5 : 0.85,
+                                }} title={`[${bucket.lo.toFixed(4)}, ${bucket.hi.toFixed(4)}) = ${bucket.count}`} />
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}

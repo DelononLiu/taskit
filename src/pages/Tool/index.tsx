@@ -17,8 +17,9 @@ import { uploadModel } from '@/api/model'
 import { createTask, getTask, getTaskLayers, getTaskHistory } from '@/api/task'
 import { OverviewChart } from '@/pages/TaskDetail/OverviewChart'
 import { LayerTable } from '@/pages/TaskDetail/LayerTable'
+import { ExecutionTree } from '@/tasks/model_diff/ExecutionTree'
 import { useUIStore } from '@/stores/uiStore'
-import type { ModelFile, ComparisonTask, LayerDiff, LayerMetric } from '@/types'
+import type { ModelFile, ComparisonTask, LayerDiff, LayerMetric, GraphData } from '@/types'
 
 type PageState = 'entry' | 'analysis'
 type BoxState = 'empty' | 'config' | 'running'
@@ -173,6 +174,7 @@ export default function ToolPage() {
 
   // Analysis state (State 2)
   const [layers, setLayers] = useState<LayerDiff[]>([])
+  const [graphData, setGraphData] = useState<GraphData | null>(null)
   const [layersLoading, setLayersLoading] = useState(false)
   const [selectedFramework, setSelectedFramework] = useState('tensorrt')
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null)
@@ -231,8 +233,9 @@ export default function ToolPage() {
             clearInterval(poll)
             setRunning(false)
             setLayersLoading(true)
-            const allLayers = await getTaskLayers(t.id)
+            const { layers: allLayers, graph: g } = await getTaskLayers(t.id)
             setLayers(allLayers)
+            setGraphData(g)
             // Auto-select first framework that has metrics data
             const fwSet = new Set<string>()
             allLayers.forEach((l: LayerDiff) => l.metrics.forEach((m: LayerMetric) => fwSet.add(m.frameworkId)))
@@ -268,6 +271,7 @@ export default function ToolPage() {
     setInputText('')
     setTask(null)
     setLayers([])
+    setGraphData(null)
     setSelectedLayer(null)
     setLogs([])
   }
@@ -298,9 +302,10 @@ export default function ToolPage() {
 
     try {
       const task = await getTask(id)
-      const rawLayers = await getTaskLayers(id)
+      const { layers: rawLayers, graph: g } = await getTaskLayers(id)
       setTask(task)
       setLayers(rawLayers)
+      setGraphData(g)
       // Auto-select first framework that has metrics data
       const fwSet = new Set<string>()
       rawLayers.forEach((l: LayerDiff) => l.metrics?.forEach((m: LayerMetric) => fwSet.add(m.frameworkId)))
@@ -789,6 +794,17 @@ export default function ToolPage() {
               selectedLayerName={selectedLayer}
             />
           </div>
+
+          {/* Execution Tree */}
+          {graphData && (
+            <div className="pt-2">
+              <ExecutionTree
+                graph={graphData}
+                onSelectLayer={(name) => setSelectedLayer(name)}
+                selectedLayer={selectedLayer}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right panel */}
@@ -854,6 +870,39 @@ export default function ToolPage() {
                         )
                       })}
                     </div>
+
+                    {/* 逐维余弦分布（仅当全局余弦不为 1.0 时显示） */}
+                    {m.dimCosineStats && (
+                      <div className="col-span-2 mt-1 p-2 rounded-md border border-muted bg-muted/20">
+                        <div className="text-muted-foreground text-[10px] mb-1.5 font-medium">逐维余弦分布</div>
+                        <div className="flex items-center gap-3 text-xs mb-2">
+                          <span>min: <span className="font-mono text-fail">{m.dimCosineStats.min.toFixed(6)}</span></span>
+                          <span>mean: <span className="font-mono" style={{ color: m.dimCosineStats.mean >= 0.99 ? '#22c55e' : '#ef4444' }}>{m.dimCosineStats.mean.toFixed(6)}</span></span>
+                          <span>max: <span className="font-mono text-pass">{m.dimCosineStats.max.toFixed(6)}</span></span>
+                        </div>
+                        {/* 迷你直方图 */}
+                        <div className="flex items-end gap-[2px] h-8">
+                          {m.dimCosineStats.histogram.map((bucket, bi) => {
+                            const isGood = bucket.lo >= 0.99
+                            const total = m.dimCosineStats!.histogram.reduce((s, b) => s + b.count, 0)
+                            const pct = total > 0 ? bucket.count / total : 0
+                            return (
+                              <div key={bi} className="flex-1 flex flex-col items-center gap-0.5">
+                                <div
+                                  className="w-full rounded-sm transition-all"
+                                  style={{
+                                    height: `${Math.max(4, pct * 64)}px`,
+                                    background: isGood ? '#22c55e' : '#ef4444',
+                                    opacity: isGood ? 0.5 : 0.85,
+                                  }}
+                                  title={`[${bucket.lo.toFixed(4)}, ${bucket.hi.toFixed(4)}) = ${bucket.count}`}
+                                />
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
