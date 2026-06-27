@@ -32,7 +32,7 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
   const [model, setModel] = useState<ModelFile | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [selectedFrameworks, setSelectedFrameworks] = useState<string[]>(['tensorrt', 'openvino'])
+  const [selectedFrameworks, setSelectedFrameworks] = useState<string[]>([])
   const [task, setTask] = useState<ComparisonTask | null>(null)
   const [running, setRunning] = useState(false)
   const [logs, setLogs] = useState<string[]>([])

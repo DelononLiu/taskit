@@ -138,7 +138,7 @@ export default function ToolPage() {
   const [model, setModel] = useState<ModelFile | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [selectedFrameworks, setSelectedFrameworks] = useState<string[]>(['tensorrt', 'openvino'])
+  const [selectedFrameworks, setSelectedFrameworks] = useState<string[]>([])
   const [quantPrecision, setQuantPrecision] = useState('fp16')
   const [batchSize, setBatchSize] = useState('4')
 
