@@ -20,7 +20,10 @@ export async function createTask(params: CreateTaskParams): Promise<ComparisonTa
   const body = {
     module: 'model_diff',
     fileIds: params.modelId ? [params.modelId] : [],
-    params: { frameworks: [...new Set(params.frameworks)] },
+    params: {
+      frameworks: [...new Set(params.frameworks)],
+      ...(params.params || {}),
+    },
   }
 
   const resp: any = await api.post('/tasks', body, { headers: authHeaders() })

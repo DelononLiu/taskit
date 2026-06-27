@@ -19,4 +19,10 @@ export interface ComparisonTask {
 export interface CreateTaskParams {
   modelId: string
   frameworks: string[]
+  params?: {
+    precision?: string
+    batchSize?: number
+    inputSource?: string
+    inputText?: string
+  }
 }

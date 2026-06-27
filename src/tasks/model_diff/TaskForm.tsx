@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Upload, FileIcon, Loader2, Layers } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -32,7 +33,12 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
   const [model, setModel] = useState<ModelFile | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [selectedFrameworks, setSelectedFrameworks] = useState<string[]>([])
+  const [comparisonFws, setComparisonFws] = useState<string[]>([])
+  const [baselineFw, setBaselineFw] = useState('onnxruntime')
+  const [batchSize, setBatchSize] = useState('4')
+  const [precision, setPrecision] = useState('auto')
+  const [inputSource, setInputSource] = useState<'random' | 'text' | 'file'>('random')
+  const [inputText, setInputText] = useState('')
   const [task, setTask] = useState<ComparisonTask | null>(null)
   const [running, setRunning] = useState(false)
   const [logs, setLogs] = useState<string[]>([])
@@ -62,14 +68,8 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
     setUploadProgress(0)
   }
 
-  const toggleFramework = (fw: string) => {
-    setSelectedFrameworks((prev) =>
-      prev.includes(fw) ? prev.filter((v) => v !== fw) : [...prev, fw]
-    )
-  }
-
   const handleRun = async () => {
-    if (!selectedFile || selectedFrameworks.length === 0) return
+    if (!selectedFile || comparisonFws.length === 0) return
     setBoxState('running')
     setRunning(true)
     setLogs([])
@@ -84,7 +84,13 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
       // Phase 2: create analysis task
       const t = await createTask({
         modelId: m.id,
-        frameworks: [...new Set(['onnxruntime', ...selectedFrameworks])],
+        frameworks: [...new Set([baselineFw, ...comparisonFws])],
+        params: {
+          precision,
+          batchSize: Number(batchSize),
+          inputSource,
+          ...(inputSource === 'text' ? { inputText } : {}),
+        },
       })
       setTask(t)
 
@@ -95,7 +101,7 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
           setTask(updated)
           setLogs((prev) => [
             ...prev,
-            `[${new Date().toLocaleTimeString()}] ${selectedFrameworks.join('/')} 执行中 ${updated.progress}%`,
+            `[${new Date().toLocaleTimeString()}] ${comparisonFws.join('/')} 执行中 ${updated.progress}%`,
           ])
           if (updated.status === 'completed') {
             clearInterval(poll)
@@ -183,36 +189,49 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
               <div className="space-y-3">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">配置比对参数</p>
                 <div className="grid grid-cols-2 gap-3">
+                  {/* Baseline framework */}
                   <div className="space-y-1.5">
-                    <label className="text-xs text-muted-foreground">比对目标框架</label>
-                    <div className="flex gap-2">
-                      {FW_OPTIONS.map((fw) => (
-                        <button key={fw.value} onClick={() => toggleFramework(fw.value)}
-                          className={cn('px-3 py-1.5 rounded-md text-xs font-medium border transition-colors',
-                            selectedFrameworks.includes(fw.value) ? 'bg-accent border-border text-accent-foreground'
-                              : 'border-border/50 text-muted-foreground hover:border-border')}>
-                          <span className="flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full" style={{ background: fw.color }} />
-                            {fw.label}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs text-muted-foreground">目标量化精度</label>
-                    <Select defaultValue="fp16">
+                    <label className="text-xs text-muted-foreground">基准框架</label>
+                    <Select value={baselineFw} onValueChange={setBaselineFw}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="fp32" className="text-xs">FP32（全精度）</SelectItem>
-                        <SelectItem value="fp16" className="text-xs">FP16（半精度）</SelectItem>
-                        <SelectItem value="int8" className="text-xs">INT8（熵校准）</SelectItem>
+                        {FW_OPTIONS.map((fw) => (
+                          <SelectItem key={fw.value} value={fw.value} className="text-xs">
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ background: fw.color }} />
+                              {fw.label}
+                            </span>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
+                  {/* Comparison frameworks */}
                   <div className="space-y-1.5">
-                    <label className="text-xs text-muted-foreground">推理 Batch Size</label>
-                    <Select defaultValue="4">
+                    <label className="text-xs text-muted-foreground">对比框架</label>
+                    <div className="flex flex-col gap-1.5 pt-0.5">
+                      {FW_OPTIONS.map((fw) => (
+                        <label key={fw.value} className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={comparisonFws.includes(fw.value)}
+                            onCheckedChange={(checked) => {
+                              setComparisonFws((prev) =>
+                                checked ? [...prev, fw.value] : prev.filter((v) => v !== fw.value)
+                              )
+                            }}
+                          />
+                          <span className="flex items-center gap-1.5 text-xs">
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ background: fw.color }} />
+                            {fw.label}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Batch size */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">Batch Size</label>
+                    <Select value={batchSize} onValueChange={setBatchSize}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {[1, 2, 4, 8, 16, 32].map((v) => (
@@ -221,20 +240,50 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
                       </SelectContent>
                     </Select>
                   </div>
+                  {/* Precision */}
                   <div className="space-y-1.5">
-                    <label className="text-xs text-muted-foreground">输入验证集</label>
-                    <Select defaultValue="imagenet-500">
-                      <SelectTrigger className="h-8 text-xs text-muted-foreground"><SelectValue /></SelectTrigger>
+                    <label className="text-xs text-muted-foreground">推理精度</label>
+                    <Select value={precision} onValueChange={setPrecision}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="imagenet-500" className="text-xs">ImageNet-Val (500样本)</SelectItem>
+                        <SelectItem value="auto" className="text-xs">AUTO</SelectItem>
+                        <SelectItem value="fp32" className="text-xs">FP32（全精度）</SelectItem>
+                        <SelectItem value="fp16" className="text-xs">FP16（半精度）</SelectItem>
+                        <SelectItem value="int8" className="text-xs">INT8（熵校准）</SelectItem>
+                        <SelectItem value="uint8" className="text-xs">UINT8</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
+                {/* Input source */}
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">输入数据</label>
+                  <div className="flex flex-wrap gap-2">
+                    {(['random', 'text', 'file'] as const).map((src) => (
+                      <button key={src} onClick={() => setInputSource(src)}
+                        className={cn('px-3 py-1.5 rounded-md text-xs font-medium border transition-colors',
+                          inputSource === src ? 'bg-accent border-border text-accent-foreground'
+                            : 'border-border/50 text-muted-foreground hover:border-border')}>
+                        {src === 'random' ? '随机数据' : src === 'text' ? '文本输入' : '文件输入'}
+                      </button>
+                    ))}
+                  </div>
+                  {inputSource === 'text' && (
+                    <textarea value={inputText} onChange={(e) => setInputText(e.target.value)}
+                      placeholder="输入推理文本..."
+                      className="w-full mt-1.5 h-20 rounded-md border border-input bg-background px-3 py-2 text-xs outline-none focus:border-ring resize-none" />
+                  )}
+                  {inputSource === 'file' && (
+                    <div className="mt-1.5 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-accent/30 transition-colors"
+                      onClick={() => fileInputRef.current?.click()}>
+                      <p className="text-xs text-muted-foreground">点击选择输入数据文件</p>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="h-px bg-border" />
               <Button className="w-full h-10 text-sm gap-2"
-                disabled={selectedFrameworks.length === 0} onClick={handleRun}>
+                disabled={comparisonFws.length === 0} onClick={handleRun}>
                 <Layers className="h-4 w-4" />
                 开始分析（预计耗时 ~10 分钟）
               </Button>
