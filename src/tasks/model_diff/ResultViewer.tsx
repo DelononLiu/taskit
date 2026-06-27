@@ -43,14 +43,17 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
         setTask(buildMockTask('resnet50_v1', 'completed', 3, 3))
         setLayers(MOCK_LAYERS_ALL_PASS)
         setSelectedLayer(null)
+        setSelectedFramework('onnxruntime')
       } else if (taskId === 'mock-yolov8_test') {
         setTask(buildMockTask('yolov8_test', 'completed', 2, 3))
         setLayers(MOCK_LAYERS_HAS_FAIL)
         setSelectedLayer('conv_23')
+        setSelectedFramework('onnxruntime')
       } else {
         setTask(buildMockTask('bert_base_eval', 'failed', 0, 0))
         setLayers([])
         setSelectedLayer(null)
+        setSelectedFramework('onnxruntime')
       }
       setLayersLoading(false)
       return
@@ -65,6 +68,11 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
       setTask(t)
       const rawLayers = await getTaskLayers(tid)
       setLayers(rawLayers)
+      // Auto-select first framework that has metrics data
+      const fwSet = new Set<string>()
+      rawLayers.forEach((l: LayerDiff) => l.metrics?.forEach((m: LayerMetric) => fwSet.add(m.frameworkId)))
+      const firstFw = [...fwSet][0]
+      if (firstFw) setSelectedFramework(firstFw)
       const failed = rawLayers.find((l: any) => l.metrics?.some((m: any) => !m.passed))
       setSelectedLayer(failed?.layerName ?? null)
     } catch (e) {

@@ -61,10 +61,21 @@ with open('$TMP_INPUT', 'w') as f: json.dump(d, f)
 
   # ── 4. 比较 ──
   echo "[orchestrator] comparing FP32 vs INT8..."
+  # 从 input.json 读取目标框架名（frameworks 最后一项）
+  TARGET_FW=$(python3 -c "
+import json
+data = json.load(open('$INPUT_JSON'))
+fw = data.get('frameworks', ['onnxruntime'])
+# 使用用户选择的第一个非基线框架；如果只有一项就用它
+fw = [f for f in fw if f != 'onnxruntime'] or fw
+print(fw[-1])
+")
+  echo "[orchestrator] framework-id: $TARGET_FW"
   python3 "$SCRIPT_DIR/tensor-compare.py" \
     --baseline "${BASELINE_DIR}" \
     --target "${BASELINE_DIR}_int8" \
-    -o "$TASK_DIR/output.json"
+    -o "$TASK_DIR/output.json" \
+    --framework-id "$TARGET_FW"
 else
   echo "[orchestrator] no quantized model, baseline only"
   # 没有量化模型时，至少输出 meta 信息（无 metrics）

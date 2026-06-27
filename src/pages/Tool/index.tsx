@@ -223,6 +223,11 @@ export default function ToolPage() {
             setLayersLoading(true)
             const allLayers = await getTaskLayers(t.id)
             setLayers(allLayers)
+            // Auto-select first framework that has metrics data
+            const fwSet = new Set<string>()
+            allLayers.forEach((l: LayerDiff) => l.metrics.forEach((m: LayerMetric) => fwSet.add(m.frameworkId)))
+            const firstFw = [...fwSet][0]
+            if (firstFw) setSelectedFramework(firstFw)
             setLayersLoading(false)
             setPageState('analysis')
           }
@@ -254,7 +259,6 @@ export default function ToolPage() {
 
   const handleViewRecent = async (id: string) => {
     setPageState('analysis')
-    setSelectedFramework('tensorrt')
     const useMock = import.meta.env.VITE_USE_MOCK !== 'false'
 
     if (useMock) {
@@ -262,14 +266,17 @@ export default function ToolPage() {
         setTask(buildMockTask('resnet50_v1', 'completed', 3, 3))
         setLayers(MOCK_LAYERS_ALL_PASS)
         setSelectedLayer(null)
+        setSelectedFramework('onnxruntime')
       } else if (id === 'task-002') {
         setTask(buildMockTask('yolov8_test', 'completed', 2, 3))
         setLayers(MOCK_LAYERS_HAS_FAIL)
         setSelectedLayer('conv_23')
+        setSelectedFramework('onnxruntime')
       } else {
         setTask(buildMockTask('bert_base_eval', 'failed', 0, 0))
         setLayers([])
         setSelectedLayer(null)
+        setSelectedFramework('onnxruntime')
       }
       return
     }
@@ -279,6 +286,11 @@ export default function ToolPage() {
       const rawLayers = await getTaskLayers(id)
       setTask(task)
       setLayers(rawLayers)
+      // Auto-select first framework that has metrics data
+      const fwSet = new Set<string>()
+      rawLayers.forEach((l: LayerDiff) => l.metrics?.forEach((m: LayerMetric) => fwSet.add(m.frameworkId)))
+      const firstFw = [...fwSet][0]
+      if (firstFw) setSelectedFramework(firstFw)
       const failed = rawLayers.find((l: any) => l.metrics?.some((m: any) => !m.passed))
       setSelectedLayer(failed?.layerName ?? null)
     } catch (e) {
@@ -587,9 +599,9 @@ export default function ToolPage() {
             <span className="text-sm font-semibold tracking-tight">ModelDiff</span>
           </div>
           <div className="w-px h-4 bg-muted" />
-          <span className="text-xs font-mono font-medium">task_{model?.name ?? 'unknown'}</span>
+          <span className="text-xs font-mono font-medium">task_{model?.name ?? task?.model?.name ?? 'unknown'}</span>
           <span className="text-xs text-muted-foreground font-mono">|</span>
-          <span className="text-xs text-muted-foreground">{model?.name}</span>
+          <span className="text-xs text-muted-foreground">{model?.name ?? task?.model?.name}</span>
         </div>
 
         <div className="flex items-center gap-3">
@@ -642,11 +654,11 @@ export default function ToolPage() {
               <div className="grid grid-cols-5 divide-x divide-muted text-[11px]">
                 <div className="px-3 py-2.5">
                   <p className="text-muted-foreground/60 mb-0.5">架构</p>
-                  <p className="font-medium text-foreground">{extractArch(task.model.name)}</p>
+                  <p className="font-medium text-foreground">{extractArch(model?.name ?? '')}</p>
                 </div>
                 <div className="px-3 py-2.5">
                   <p className="text-muted-foreground/60 mb-0.5">参数量</p>
-                  <p className="font-medium text-foreground">{mockParams(task.model.name)}</p>
+                  <p className="font-medium text-foreground">{mockParams(model?.name ?? '')}</p>
                 </div>
                 <div className="px-3 py-2.5">
                   <p className="text-muted-foreground/60 mb-0.5">框架</p>
@@ -658,8 +670,8 @@ export default function ToolPage() {
                 </div>
                 <div className="px-3 py-2.5">
                   <p className="text-muted-foreground/60 mb-0.5">文件</p>
-                  <p className="font-mono text-xs text-foreground">{task.model.name}</p>
-                  <p className="text-muted-foreground/60">{formatSize(task.model.size)}</p>
+                  <p className="font-mono text-xs text-foreground">{model?.name ?? task.model.name}</p>
+                  <p className="text-muted-foreground/60">{model ? formatSize(model.size) : formatSize(task.model.size)}</p>
                 </div>
               </div>
             </div>
