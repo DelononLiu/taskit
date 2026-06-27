@@ -49,7 +49,9 @@ export function AuthPage() {
           {mode === 'register' && (
             <input
               type="text"
+              name="name"
               placeholder="用户名（选填）"
+              autoComplete="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs outline-none focus:border-ring"
@@ -57,16 +59,20 @@ export function AuthPage() {
           )}
           <input
             type="email"
+            name="email"
             placeholder="邮箱"
             required
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs outline-none focus:border-ring"
           />
           <input
             type="password"
+            name="password"
             placeholder="密码"
             required
+            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs outline-none focus:border-ring"

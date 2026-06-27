@@ -1,7 +1,9 @@
 import express from 'express'
 import cors from 'cors'
+import path from 'path'
+import fs from 'fs'
 import { config } from './config.js'
-import { prisma } from './lib/prisma.js'
+import { prisma, resolveDbPath } from './lib/prisma.js'
 
 // 导入 passport 策略（注册 JWT 策略）
 import './middleware/passport.js'
@@ -49,8 +51,26 @@ app.get('/api/modules', optionalAuth, (_req, res) => {
 // ── 启动 ──
 async function main() {
   await prisma.$connect()
-  console.log(`  已连接数据库`)
-  console.log(`  已注册模块: ${Object.keys(MODULES).join(', ')}`)
+
+  // 确保上传目录存在
+  const uploadDir = path.resolve(config.uploadDir)
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
+
+  // ── 启动信息 ──
+  const info = [
+    `Taskit Backend`,
+    `Port        : http://localhost:${config.port}`,
+    `Database    : ${resolveDbPath()}`,
+    `Uploads     : ${uploadDir}`,
+    `Modules     : ${Object.keys(MODULES).join(', ')}`,
+  ]
+  const width = Math.max(...info.map(s => s.length)) + 4
+  const sep = '─'.repeat(width - 2)
+  console.log(`  ┌${sep}┐`)
+  for (const line of info) {
+    console.log(`  │ ${line.padEnd(width - 4)} │`)
+  }
+  console.log(`  └${sep}┘`)
 
   app.listen(config.port, () => {
     console.log(`  Taskit API → http://localhost:${config.port}`)
