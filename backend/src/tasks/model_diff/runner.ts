@@ -12,10 +12,10 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const runnerScript = path.resolve(__dirname, '../../../../runners/model_diff/run.sh')
+const runnerScript = path.resolve(__dirname, '../../../../runners/model_diff/run-onnx.sh')
 
 MODULES.model_diff = {
   name: '模型精度比对',
-  shell: `bash ${runnerScript} --input {input_path} --params '{params}'`,
+  shell: `bash ${runnerScript} -C {task_dir}`,
   parser: parseModelDiffOutput,
 }
