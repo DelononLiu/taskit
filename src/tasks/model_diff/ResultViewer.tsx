@@ -21,6 +21,7 @@ interface Props {
 }
 
 const FW_OPTIONS = [
+  { value: 'onnxruntime', label: 'ONNX Runtime', color: '#1677ff' },
   { value: 'tensorrt', label: 'TensorRT', color: '#9333ea' },
   { value: 'openvino', label: 'OpenVINO', color: '#f97316' },
 ]
@@ -97,7 +98,7 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(task.frameworks ?? []).filter((f: string) => f !== 'onnxruntime').map((fw: string) => {
+                {(task.frameworks ?? []).map((fw: string) => {
                   const cfg = FW_OPTIONS.find((o) => o.value === fw)
                   return (
                     <SelectItem key={fw} value={fw} className="text-xs">
@@ -127,7 +128,7 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
                 </div>
                 <div className="px-3 py-2.5">
                   <p className="text-muted-foreground/60 mb-0.5">框架</p>
-                  <p className="font-mono text-foreground">{(task.frameworks ?? []).filter((f: string) => f !== 'onnxruntime').join(' + ')}</p>
+                  <p className="font-mono text-foreground">{(task.frameworks ?? []).join(' + ')}</p>
                 </div>
                 <div className="px-3 py-2.5">
                   <p className="text-muted-foreground/60 mb-0.5">硬件</p>

@@ -76,28 +76,34 @@ const MOCK_RECENT = MOCK_TASKS
 // Mock deep data loaded when a history task is clicked
 const MOCK_LAYERS_ALL_PASS: LayerDiff[] = [
   { layerName: 'conv_1', layerType: 'Conv', inputShape: [1,3,224,224], outputShape: [1,64,112,112], metrics: [
+    { frameworkId: 'onnxruntime', cosineSimilarity: 0.999999, maxAbsError: 0.000008, meanAbsError: 0.000002, relativeError: 0.000003, snr: 44.9, passed: true },
     { frameworkId: 'tensorrt', cosineSimilarity: 0.999998, maxAbsError: 0.000012, meanAbsError: 0.000003, relativeError: 0.000005, snr: 42.3, passed: true },
     { frameworkId: 'openvino', cosineSimilarity: 0.999997, maxAbsError: 0.000018, meanAbsError: 0.000004, relativeError: 0.000007, snr: 41.1, passed: true },
   ]},
   { layerName: 'conv_2', layerType: 'Conv', inputShape: [1,64,112,112], outputShape: [1,64,112,112], metrics: [
+    { frameworkId: 'onnxruntime', cosineSimilarity: 0.999999, maxAbsError: 0.000006, meanAbsError: 0.000002, relativeError: 0.000002, snr: 46.2, passed: true },
     { frameworkId: 'tensorrt', cosineSimilarity: 0.999999, maxAbsError: 0.000008, meanAbsError: 0.000002, relativeError: 0.000003, snr: 44.8, passed: true },
     { frameworkId: 'openvino', cosineSimilarity: 0.999998, maxAbsError: 0.000011, meanAbsError: 0.000003, relativeError: 0.000004, snr: 43.2, passed: true },
   ]},
   { layerName: 'fc_output', layerType: 'Gemm', inputShape: [1,2048], outputShape: [1,1000], metrics: [
+    { frameworkId: 'onnxruntime', cosineSimilarity: 0.999997, maxAbsError: 0.000015, meanAbsError: 0.000004, relativeError: 0.000006, snr: 41.8, passed: true },
     { frameworkId: 'tensorrt', cosineSimilarity: 0.999996, maxAbsError: 0.000021, meanAbsError: 0.000005, relativeError: 0.000008, snr: 40.5, passed: true },
     { frameworkId: 'openvino', cosineSimilarity: 0.999995, maxAbsError: 0.000025, meanAbsError: 0.000006, relativeError: 0.000010, snr: 39.8, passed: true },
   ]},
 ]
 const MOCK_LAYERS_HAS_FAIL: LayerDiff[] = [
   { layerName: 'conv_1', layerType: 'Conv', inputShape: [1,3,224,224], outputShape: [1,64,112,112], metrics: [
+    { frameworkId: 'onnxruntime', cosineSimilarity: 0.999999, maxAbsError: 0.000008, meanAbsError: 0.000002, relativeError: 0.000003, snr: 44.9, passed: true },
     { frameworkId: 'tensorrt', cosineSimilarity: 0.999998, maxAbsError: 0.000012, meanAbsError: 0.000003, relativeError: 0.000005, snr: 42.3, passed: true },
     { frameworkId: 'openvino', cosineSimilarity: 0.999997, maxAbsError: 0.000018, meanAbsError: 0.000004, relativeError: 0.000007, snr: 41.1, passed: true },
   ]},
   { layerName: 'conv_23', layerType: 'Conv', inputShape: [1,512,14,14], outputShape: [1,512,14,14], metrics: [
+    { frameworkId: 'onnxruntime', cosineSimilarity: 0.920400, maxAbsError: 0.198000, meanAbsError: 0.076500, relativeError: 0.110200, snr: 3.8, passed: false },
     { frameworkId: 'tensorrt', cosineSimilarity: 0.912300, maxAbsError: 0.215000, meanAbsError: 0.087600, relativeError: 0.123400, snr: 3.2, passed: false },
     { frameworkId: 'openvino', cosineSimilarity: 0.895600, maxAbsError: 0.242000, meanAbsError: 0.094300, relativeError: 0.135700, snr: 2.8, passed: false },
   ]},
   { layerName: 'fc_output', layerType: 'Gemm', inputShape: [1,2048], outputShape: [1,1000], metrics: [
+    { frameworkId: 'onnxruntime', cosineSimilarity: 0.999997, maxAbsError: 0.000015, meanAbsError: 0.000004, relativeError: 0.000006, snr: 41.8, passed: true },
     { frameworkId: 'tensorrt', cosineSimilarity: 0.999996, maxAbsError: 0.000021, meanAbsError: 0.000005, relativeError: 0.000008, snr: 40.5, passed: true },
     { frameworkId: 'openvino', cosineSimilarity: 0.999995, maxAbsError: 0.000025, meanAbsError: 0.000006, relativeError: 0.000010, snr: 39.8, passed: true },
   ]},
@@ -111,6 +117,8 @@ function buildMockTask(name: string, status: 'completed' | 'failed', passed: num
     model: { id: 'mock-model', name: `${name}.onnx`, format: 'onnx', size: 47185920, uploadTime: '2026-06-26T14:30:00Z' },
     baseline: null,
     comparisons: [
+      { framework: { id: 'onnxruntime', name: 'ONNX Runtime', value: 'onnxruntime' },
+        overallMetrics: { totalLayers: total, passedLayers: passed, failedLayers: total - passed, avgCosineSimilarity: allPass ? 0.999998 : 0.965, maxAbsError: allPass ? 0.000010 : 0.198, worstLayer: allPass ? null : 'conv_23' } },
       { framework: { id: 'tensorrt', name: 'TensorRT', value: 'tensorrt' },
         overallMetrics: { totalLayers: total, passedLayers: passed, failedLayers: total - passed, avgCosineSimilarity: allPass ? 0.999997 : 0.956, maxAbsError: allPass ? 0.000015 : 0.215, worstLayer: allPass ? null : 'conv_23' } },
       { framework: { id: 'openvino', name: 'OpenVINO', value: 'openvino' },
@@ -128,6 +136,7 @@ export default function ToolPage() {
   // Box state (State 1 sub-states)
   const [boxState, setBoxState] = useState<BoxState>('empty')
   const [model, setModel] = useState<ModelFile | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [selectedFrameworks, setSelectedFrameworks] = useState<string[]>(['tensorrt', 'openvino'])
   const [quantPrecision, setQuantPrecision] = useState('fp16')
@@ -164,21 +173,15 @@ export default function ToolPage() {
   const [selectedFramework, setSelectedFramework] = useState('tensorrt')
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null)
 
-  // ── Upload ───────────────────────────────────────
-  const handleUpload = useCallback(async (file: File) => {
+  // ── File selection (defer upload to analyze time) ──
+  const handleFileSelect = useCallback((file: File) => {
     if (!file.name.endsWith('.onnx')) return
-    setUploadProgress(0)
-    try {
-      const m = await uploadModel(file, (pct) => setUploadProgress(pct))
-      setModel(m)
-      setUploadProgress(100)
-      setBoxState('config')
-    } catch {
-      console.error('upload failed')
-    }
+    setSelectedFile(file)
+    setBoxState('config')
   }, [])
 
-  const handleRemoveModel = () => {
+  const handleRemoveFile = () => {
+    setSelectedFile(null)
     setModel(null)
     setBoxState('empty')
     setUploadProgress(0)
@@ -186,18 +189,26 @@ export default function ToolPage() {
 
   // ── Run ──────────────────────────────────────────
   const handleRun = async () => {
-    if (!model || selectedFrameworks.length === 0) return
+    if (!selectedFile || selectedFrameworks.length === 0) return
     setBoxState('running')
     setRunning(true)
     setLogs([])
     setTask(null)
+    setUploadProgress(0)
     try {
+      // Phase 1: upload model
+      const m = await uploadModel(selectedFile, (pct) => setUploadProgress(pct))
+      setModel(m)
+      setUploadProgress(100)
+
+      // Phase 2: create analysis task
       const t = await createTask({
-        modelId: model.id,
-        frameworks: ['onnxruntime', ...selectedFrameworks],
+        modelId: m.id,
+        frameworks: [...new Set(['onnxruntime', ...selectedFrameworks])],
       })
       setTask(t)
 
+      // Phase 3: poll for results
       const poll = setInterval(async () => {
         try {
           const updated = await getTask(t.id)
@@ -224,6 +235,7 @@ export default function ToolPage() {
         }
       }, 1500)
     } catch {
+      setBoxState('config')
       setRunning(false)
     }
   }
@@ -232,6 +244,7 @@ export default function ToolPage() {
   const handleNewTask = () => {
     setPageState('entry')
     setBoxState('empty')
+    setSelectedFile(null)
     setModel(null)
     setTask(null)
     setLayers([])
@@ -284,6 +297,7 @@ export default function ToolPage() {
   }
 
   const FW_OPTIONS = [
+    { value: 'onnxruntime', label: 'ONNX Runtime', color: '#1677ff' },
     { value: 'tensorrt', label: 'TensorRT', color: '#9333ea' },
     { value: 'openvino', label: 'OpenVINO', color: '#f97316' },
   ]
@@ -329,7 +343,7 @@ export default function ToolPage() {
                   e.preventDefault()
                   setDragOver(false)
                   const file = e.dataTransfer.files[0]
-                  if (file) handleUpload(file)
+                  if (file) handleFileSelect(file)
                 }}
                 onClick={() => fileInputRef.current?.click()}
                 className={cn(
@@ -344,7 +358,7 @@ export default function ToolPage() {
                   type="file"
                   accept=".onnx"
                   className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+                  onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
                 />
                 <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center mx-auto mb-3">
                   <Upload className="h-4 w-4 text-primary" />
@@ -355,19 +369,19 @@ export default function ToolPage() {
             )}
 
             {/* CONFIG STATE */}
-            {boxState === 'config' && model && (
+            {boxState === 'config' && selectedFile && (
               <div className="border rounded-xl p-6 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {/* File info */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 min-w-0">
                     <FileIcon className="h-5 w-5 text-primary shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{model.name}</p>
-                      <p className="text-xs text-muted-foreground">{formatSize(model.size)}</p>
+                      <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+                      <p className="text-xs text-muted-foreground">{formatSize(selectedFile.size)}</p>
                     </div>
-                    <Badge variant="success" className="text-[10px]">已上传</Badge>
+                    <Badge variant="outline" className="text-[10px] text-muted-foreground">待上传</Badge>
                   </div>
-                  <button onClick={handleRemoveModel} className="text-xs text-muted-foreground hover:text-foreground shrink-0 ml-2">✕</button>
+                  <button onClick={handleRemoveFile} className="text-xs text-muted-foreground hover:text-foreground shrink-0 ml-2">✕</button>
                 </div>
 
                 <div className="h-px bg-border" />
@@ -461,40 +475,62 @@ export default function ToolPage() {
             )}
 
             {/* RUNNING STATE */}
-            {boxState === 'running' && task && (
+            {boxState === 'running' && (
               <div className="border rounded-xl p-6 space-y-4">
-                <div className="flex items-center gap-3">
-                  {task.error ? (
-                    <div className="h-5 w-5 rounded-full bg-fail/20 flex items-center justify-center shrink-0">
-                      <span className="text-fail text-xs font-bold">!</span>
+                {task ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      {task.error ? (
+                        <div className="h-5 w-5 rounded-full bg-fail/20 flex items-center justify-center shrink-0">
+                          <span className="text-fail text-xs font-bold">!</span>
+                        </div>
+                      ) : (
+                        <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
+                      )}
+                      <div>
+                        <p className="text-sm font-medium">
+                          {task.error ? '分析失败' : `正在分析: ${model?.name}`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {task.error
+                            ? task.error
+                            : `进度: ${task.progress}%  |  ETA: 估算中`}
+                        </p>
+                      </div>
                     </div>
-                  ) : (
-                    <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
-                  )}
-                  <div>
-                    <p className="text-sm font-medium">
-                      {task.error ? '分析失败' : `正在分析: ${model?.name}`}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {task.error
-                        ? task.error
-                        : `进度: ${task.progress}%  |  ETA: 估算中`}
-                    </p>
+
+                    {!task.error && <Progress value={task.progress} className="h-2" />}
+
+                    {/* Logs */}
+                    <div className="bg-black/40 rounded-md p-3 h-28 overflow-y-auto font-mono text-[11px] space-y-0.5">
+                      {logs.map((log, i) => (
+                        <div key={i} className="text-green-400/80">{log}</div>
+                      ))}
+                      {task.error && (
+                        <div className="text-red-400/90 text-[11px]">{task.error}</div>
+                      )}
+                      {logs.length === 0 && !task.error && <div className="text-muted-foreground/50">等待执行日志...</div>}
+                    </div>
+                  </>
+                ) : (
+                  /* Upload phase (before task creation) */
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium">正在上传模型...</p>
+                        <p className="text-xs text-muted-foreground">进度: {uploadProgress}%</p>
+                      </div>
+                    </div>
+                    {uploadProgress > 0 && <Progress value={uploadProgress} className="h-2" />}
+                    <div className="bg-black/40 rounded-md p-3 h-28 overflow-y-auto font-mono text-[11px] space-y-0.5">
+                      {logs.map((log, i) => (
+                        <div key={i} className="text-green-400/80">{log}</div>
+                      ))}
+                      {logs.length === 0 && <div className="text-muted-foreground/50">等待上传...</div>}
+                    </div>
                   </div>
-                </div>
-
-                {!task.error && <Progress value={task.progress} className="h-2" />}
-
-                {/* Logs */}
-                <div className="bg-black/40 rounded-md p-3 h-28 overflow-y-auto font-mono text-[11px] space-y-0.5">
-                  {logs.map((log, i) => (
-                    <div key={i} className="text-green-400/80">{log}</div>
-                  ))}
-                  {task.error && (
-                    <div className="text-red-400/90 text-[11px]">{task.error}</div>
-                  )}
-                  {logs.length === 0 && !task.error && <div className="text-muted-foreground/50">等待执行日志...</div>}
-                </div>
+                )}
               </div>
             )}
           </div>
@@ -614,7 +650,7 @@ export default function ToolPage() {
                 </div>
                 <div className="px-3 py-2.5">
                   <p className="text-muted-foreground/60 mb-0.5">框架</p>
-                  <p className="font-mono text-foreground">{task.frameworks.filter(f => f !== 'onnxruntime').join(' + ')}</p>
+                  <p className="font-mono text-foreground">{task.frameworks.join(' + ')}</p>
                 </div>
                 <div className="px-3 py-2.5">
                   <p className="text-muted-foreground/60 mb-0.5">硬件</p>

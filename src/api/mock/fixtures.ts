@@ -8,6 +8,15 @@ export const MOCK_MODEL: ModelFile = {
   uploadTime: new Date().toISOString(),
 }
 
+export const MOCK_ONNXRUNTIME_METRICS: OverallMetrics = {
+  totalLayers: 128,
+  passedLayers: 125,
+  failedLayers: 3,
+  avgCosineSimilarity: 0.999,
+  maxAbsError: 0.085,
+  worstLayer: 'fc_out',
+}
+
 export const MOCK_TENSORRT_METRICS: OverallMetrics = {
   totalLayers: 128,
   passedLayers: 120,
@@ -50,6 +59,15 @@ function generateMockLayerDiffs(): LayerDiff[] {
       outputShape: [1, 64, 56, 56],
       metrics: [
         {
+          frameworkId: 'onnxruntime',
+          cosineSimilarity: Math.min(1, cosineSimilarity + Math.random() * 0.005),
+          maxAbsError: maxAbsError * (0.5 + Math.random() * 0.3),
+          meanAbsError: meanAbsError * (0.5 + Math.random() * 0.3),
+          relativeError: maxAbsError / 3,
+          snr: 25 + Math.random() * 30,
+          passed: cosineSimilarity >= 0.99,
+        },
+        {
           frameworkId: 'tensorrt',
           cosineSimilarity,
           maxAbsError,
@@ -77,13 +95,14 @@ export const MOCK_LAYER_DIFFS = generateMockLayerDiffs()
 export const MOCK_TASK: ComparisonTask = {
   id: 'task-001',
   model: MOCK_MODEL,
-  frameworks: ['tensorrt', 'openvino'],
+  frameworks: ['onnxruntime', 'tensorrt', 'openvino'],
   status: 'completed',
   progress: 100,
   createdAt: new Date(Date.now() - 60000).toISOString(),
   completedAt: new Date().toISOString(),
   baseline: null,
   comparisons: [
+    { framework: { id: 'onnxruntime', name: 'ONNX Runtime', value: 'onnxruntime' }, overallMetrics: MOCK_ONNXRUNTIME_METRICS },
     { framework: { id: 'tensorrt', name: 'TensorRT', value: 'tensorrt' }, overallMetrics: MOCK_TENSORRT_METRICS },
     { framework: { id: 'openvino', name: 'OpenVINO', value: 'openvino' }, overallMetrics: MOCK_OPENVINO_METRICS },
   ],

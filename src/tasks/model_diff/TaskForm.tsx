@@ -16,6 +16,7 @@ import { TaskHistoryDrawer } from '@/core/components/TaskHistoryDrawer'
 import { TopNav } from '@/core/components/TopNav'
 
 const FW_OPTIONS = [
+  { value: 'onnxruntime', label: 'ONNX Runtime', color: '#1677ff' },
   { value: 'tensorrt', label: 'TensorRT', color: '#9333ea' },
   { value: 'openvino', label: 'OpenVINO', color: '#f97316' },
 ]
@@ -29,6 +30,7 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
   const [dragOver, setDragOver] = useState(false)
   const [boxState, setBoxState] = useState<'empty' | 'config' | 'running'>('empty')
   const [model, setModel] = useState<ModelFile | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [selectedFrameworks, setSelectedFrameworks] = useState<string[]>(['tensorrt', 'openvino'])
   const [task, setTask] = useState<ComparisonTask | null>(null)
@@ -47,18 +49,14 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
     }
   }, [])
 
-  const handleUpload = useCallback(async (file: File) => {
+  const handleFileSelect = useCallback((file: File) => {
     if (!file.name.endsWith('.onnx')) return
-    setUploadProgress(0)
-    try {
-      const m = await uploadModel(file, (pct) => setUploadProgress(pct))
-      setModel(m)
-      setUploadProgress(100)
-      setBoxState('config')
-    } catch { console.error('upload failed') }
+    setSelectedFile(file)
+    setBoxState('config')
   }, [])
 
-  const handleRemoveModel = () => {
+  const handleRemoveFile = () => {
+    setSelectedFile(null)
     setModel(null)
     setBoxState('empty')
     setUploadProgress(0)
@@ -71,18 +69,26 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
   }
 
   const handleRun = async () => {
-    if (!model || selectedFrameworks.length === 0) return
+    if (!selectedFile || selectedFrameworks.length === 0) return
     setBoxState('running')
     setRunning(true)
     setLogs([])
     setTask(null)
+    setUploadProgress(0)
     try {
+      // Phase 1: upload model
+      const m = await uploadModel(selectedFile, (pct) => setUploadProgress(pct))
+      setModel(m)
+      setUploadProgress(100)
+
+      // Phase 2: create analysis task
       const t = await createTask({
-        modelId: model.id,
-        frameworks: ['onnxruntime', ...selectedFrameworks],
+        modelId: m.id,
+        frameworks: [...new Set(['onnxruntime', ...selectedFrameworks])],
       })
       setTask(t)
 
+      // Phase 3: poll for results
       const poll = setInterval(async () => {
         try {
           const updated = await getTask(t.id)
@@ -105,6 +111,7 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
         }
       }, 1500)
     } catch {
+      setBoxState('config')
       setRunning(false)
     }
   }
@@ -142,7 +149,7 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
             <div
               onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
               onDragLeave={() => setDragOver(false)}
-              onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleUpload(f) }}
+              onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFileSelect(f) }}
               onClick={() => fileInputRef.current?.click()}
               className={cn(
                 'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all',
@@ -150,7 +157,7 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
               )}
             >
               <input ref={fileInputRef} type="file" accept=".onnx" className="hidden"
-                onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])} />
+                onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])} />
               <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center mx-auto mb-3">
                 <Upload className="h-4 w-4 text-primary" />
               </div>
@@ -159,18 +166,18 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
             </div>
           )}
 
-          {boxState === 'config' && model && (
+          {boxState === 'config' && selectedFile && (
             <div className="border rounded-xl p-6 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
                   <FileIcon className="h-5 w-5 text-primary shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{model.name}</p>
-                    <p className="text-xs text-muted-foreground">{formatSize(model.size)}</p>
+                    <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+                    <p className="text-xs text-muted-foreground">{formatSize(selectedFile.size)}</p>
                   </div>
-                  <Badge variant="success" className="text-[10px]">已上传</Badge>
+                  <Badge variant="outline" className="text-[10px] text-muted-foreground">待上传</Badge>
                 </div>
-                <button onClick={handleRemoveModel} className="text-xs text-muted-foreground hover:text-foreground shrink-0 ml-2">✕</button>
+                <button onClick={handleRemoveFile} className="text-xs text-muted-foreground hover:text-foreground shrink-0 ml-2">✕</button>
               </div>
               <div className="h-px bg-border" />
               <div className="space-y-3">
@@ -234,51 +241,71 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
             </div>
           )}
 
-          {boxState === 'running' && task && (
+          {boxState === 'running' && (
             <div className="border rounded-xl p-6 space-y-4">
-              <div className="flex items-center gap-3">
-                {task.error ? (
-                  <div className="h-5 w-5 rounded-full bg-fail/20 flex items-center justify-center shrink-0">
-                    <span className="text-fail text-xs font-bold">!</span>
+              {task ? (
+                <>
+                  <div className="flex items-center gap-3">
+                    {task.error ? (
+                      <div className="h-5 w-5 rounded-full bg-fail/20 flex items-center justify-center shrink-0">
+                        <span className="text-fail text-xs font-bold">!</span>
+                      </div>
+                    ) : (
+                      <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
+                    )}
+                    <div>
+                      <p className="text-sm font-medium">{task.error ? '分析失败' : `正在分析: ${model?.name}`}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {task.error ? task.error : `进度: ${task.progress}%  |  ETA: 估算中`}
+                      </p>
+                    </div>
                   </div>
-                ) : (
-                  <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
-                )}
-                <div>
-                  <p className="text-sm font-medium">{task.error ? '分析失败' : `正在分析: ${model?.name}`}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {task.error ? task.error : `进度: ${task.progress}%  |  ETA: 估算中`}
-                  </p>
+                  {!task.error && <Progress value={task.progress} className="h-2" />}
+                  <div className="bg-black/40 rounded-md p-3 h-28 overflow-y-auto font-mono text-[11px] space-y-0.5">
+                    {logs.map((log, i) => <div key={i} className="text-green-400/80">{log}</div>)}
+                    {task.error && <div className="text-red-400/90 text-[11px]">{task.error}</div>}
+                    {logs.length === 0 && !task.error && <div className="text-muted-foreground/50">等待执行日志...</div>}
+                  </div>
+                  {!task.error && (
+                    <button
+                      onClick={async () => {
+                        await cancelTask(task.id)
+                        setRunning(false)
+                        setBoxState('empty')
+                      }}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      取消任务
+                    </button>
+                  )}
+                  {task.error && (
+                    <button
+                      onClick={async () => {
+                        const t = await retryTask(task.id)
+                        onTaskCreated(t.id)
+                      }}
+                      className="text-xs text-primary hover:underline transition-colors"
+                    >
+                      重试任务
+                    </button>
+                  )}
+                </>
+              ) : (
+                /* Upload phase (before task creation) */
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium">正在上传模型...</p>
+                      <p className="text-xs text-muted-foreground">进度: {uploadProgress}%</p>
+                    </div>
+                  </div>
+                  {uploadProgress > 0 && <Progress value={uploadProgress} className="h-2" />}
+                  <div className="bg-black/40 rounded-md p-3 h-28 overflow-y-auto font-mono text-[11px] space-y-0.5">
+                    {logs.map((log, i) => <div key={i} className="text-green-400/80">{log}</div>)}
+                    {logs.length === 0 && <div className="text-muted-foreground/50">等待上传...</div>}
+                  </div>
                 </div>
-              </div>
-              {!task.error && <Progress value={task.progress} className="h-2" />}
-              <div className="bg-black/40 rounded-md p-3 h-28 overflow-y-auto font-mono text-[11px] space-y-0.5">
-                {logs.map((log, i) => <div key={i} className="text-green-400/80">{log}</div>)}
-                {task.error && <div className="text-red-400/90 text-[11px]">{task.error}</div>}
-                {logs.length === 0 && !task.error && <div className="text-muted-foreground/50">等待执行日志...</div>}
-              </div>
-              {!task.error && (
-                <button
-                  onClick={async () => {
-                    await cancelTask(task.id)
-                    setRunning(false)
-                    setBoxState('empty')
-                  }}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  取消任务
-                </button>
-              )}
-              {task.error && (
-                <button
-                  onClick={async () => {
-                    const t = await retryTask(task.id)
-                    onTaskCreated(t.id)
-                  }}
-                  className="text-xs text-primary hover:underline transition-colors"
-                >
-                  重试任务
-                </button>
               )}
             </div>
           )}

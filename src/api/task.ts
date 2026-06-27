@@ -20,7 +20,7 @@ export async function createTask(params: CreateTaskParams): Promise<ComparisonTa
   const body = {
     module: 'model_diff',
     fileIds: params.modelId ? [params.modelId] : [],
-    params: { frameworks: params.frameworks.filter(f => f !== 'onnxruntime') },
+    params: { frameworks: [...new Set(params.frameworks)] },
   }
 
   const resp: any = await api.post('/tasks', body, { headers: authHeaders() })
