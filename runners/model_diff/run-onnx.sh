@@ -26,6 +26,31 @@ INPUT_JSON="$TASK_DIR/input.json"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# ── 读取 input.json 中的 frameworks ──
+FRAMEWORKS=$(python3 -c "
+import json
+data = json.load(open('$INPUT_JSON'))
+print(json.dumps(data.get('frameworks', [])))
+")
+
+# 校验：仅 onnxruntime 是当前支持的推理后端
+SUPPORTED_FW=("onnxruntime")
+for fw in $(echo "$FRAMEWORKS" | python3 -c "import sys,json; [print(f) for f in json.load(sys.stdin)]"); do
+  match=0
+  for s in "${SUPPORTED_FW[@]}"; do [[ "$fw" == "$s" ]] && match=1; done
+  if [[ $match -eq 0 ]]; then
+    echo "[orchestrator] unsupported framework: $fw (only onnxruntime is implemented)" >&2
+    cat > "$TASK_DIR/output.json" <<-EOF
+{
+  "overall": null,
+  "layers": [],
+  "error": "Framework $fw is not supported (only onnxruntime is implemented)"
+}
+EOF
+    exit 1
+  fi
+done
+
 # ── 1. 跑 FP32 推理（baseline） ──
 echo "[orchestrator] running FP32 baseline..."
 python3 "$SCRIPT_DIR/run-onnx.py" -C "$TASK_DIR"
