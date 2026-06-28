@@ -39,7 +39,7 @@ export async function createTask(params: CreateTaskParams): Promise<ComparisonTa
   }
 }
 
-export async function getTask(taskId: string): Promise<ComparisonTask> {
+export async function getTask(taskId: number): Promise<ComparisonTask> {
   if (USE_MOCK) {
     return mockApi.getTask(taskId)
   }
@@ -63,7 +63,7 @@ export async function getTask(taskId: string): Promise<ComparisonTask> {
   }
 }
 
-export async function getTaskLayers(taskId: string, framework?: string): Promise<LayersResponse> {
+export async function getTaskLayers(taskId: number, framework?: string): Promise<LayersResponse> {
   if (USE_MOCK) {
     const layers = await mockApi.getTaskLayers(taskId, framework)
     return { layers, graph: null }
@@ -87,7 +87,7 @@ export async function getTaskHistory(page = 1, limit = 20): Promise<any[]> {
 
   return (resp.tasks || []).map((t: any) => ({
     id: t.id,
-    name: `任务 ${t.id.slice(0, 8)}`,
+    name: `任务 #${t.id}`,
     model: t.module || '',
     date: t.createdAt?.slice(0, 16).replace('T', ' ') || '',
     status: t.status,
@@ -96,12 +96,12 @@ export async function getTaskHistory(page = 1, limit = 20): Promise<any[]> {
   }))
 }
 
-export async function cancelTask(taskId: string): Promise<any> {
+export async function cancelTask(taskId: number): Promise<any> {
   if (USE_MOCK) return { id: taskId, status: 'cancelled' }
   return api.post(`/tasks/${taskId}/cancel`, undefined, { headers: authHeaders() })
 }
 
-export async function retryTask(taskId: string): Promise<any> {
-  if (USE_MOCK) return { id: `retry-${taskId}`, status: 'pending' }
+export async function retryTask(taskId: number): Promise<any> {
+  if (USE_MOCK) return { id: taskId, status: 'pending' }
   return api.post(`/tasks/${taskId}/retry`, undefined, { headers: authHeaders() })
 }

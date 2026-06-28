@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import { getTaskHistory, retryTask } from '@/api/task'
 
 interface HistoryItem {
-  id: string
+  id: number
   name: string
   model: string
   date: string
@@ -17,7 +17,7 @@ interface HistoryItem {
 interface Props {
   open: boolean
   onOpenChange: (v: boolean) => void
-  onSelect: (id: string) => void
+  onSelect: (id: number) => void
 }
 
 const FILTERS = [
@@ -57,7 +57,7 @@ export function TaskHistoryDrawer({ open, onOpenChange, onSelect }: Props) {
     return true
   })
 
-  const handleRetry = async (e: React.MouseEvent, id: string) => {
+  const handleRetry = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation()
     const t = await retryTask(id)
     onSelect(t.id)

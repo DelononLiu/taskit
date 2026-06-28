@@ -69,9 +69,9 @@ function mockParams(name: string) {
 
 // ─── Mock history tasks ──────────────────────────────
 const MOCK_TASKS = [
-  { id: 'task-001', name: 'resnet50_v1',   model: 'resnet50.onnx',      date: '2026-06-26 14:30', status: 'completed' as const, accuracy: '✓ 完美通过', progress: 100 },
-  { id: 'task-002', name: 'yolov8_test',    model: 'yolov8s.onnx',       date: '2026-06-26 11:20', status: 'completed' as const, accuracy: '⚠ 精度超标', progress: 100 },
-  { id: 'task-003', name: 'bert_base_eval', model: 'bert_base.onnx',     date: '2026-06-25 09:15', status: 'failed' as const,    accuracy: '✗ 推理失败', progress: 62 },
+  { id: 1, name: 'resnet50_v1',   model: 'resnet50.onnx',      date: '2026-06-26 14:30', status: 'completed' as const, accuracy: '✓ 完美通过', progress: 100 },
+  { id: 2, name: 'yolov8_test',    model: 'yolov8s.onnx',       date: '2026-06-26 11:20', status: 'completed' as const, accuracy: '⚠ 精度超标', progress: 100 },
+  { id: 3, name: 'bert_base_eval', model: 'bert_base.onnx',     date: '2026-06-25 09:15', status: 'failed' as const,    accuracy: '✗ 推理失败', progress: 62 },
 ]
 const MOCK_RECENT = MOCK_TASKS
 
@@ -111,10 +111,10 @@ const MOCK_LAYERS_HAS_FAIL: LayerDiff[] = [
   ]},
 ]
 
-function buildMockTask(name: string, status: 'completed' | 'failed', passed: number, total: number): ComparisonTask {
+function buildMockTask(id: number, name: string, status: 'completed' | 'failed', passed: number, total: number): ComparisonTask {
   const allPass = total === passed
   return {
-    id: `mock-${name}`, frameworks: ['onnxruntime', 'tensorrt', 'openvino'], status, progress: status === 'completed' ? 100 : 62,
+    id, frameworks: ['onnxruntime', 'tensorrt', 'openvino'], status, progress: status === 'completed' ? 100 : 62,
     createdAt: '2026-06-26T14:30:00Z',
     model: { id: 'mock-model', name: `${name}.onnx`, format: 'onnx', size: 47185920, uploadTime: '2026-06-26T14:30:00Z' },
     baseline: null,
@@ -276,23 +276,23 @@ export default function ToolPage() {
     setLogs([])
   }
 
-  const handleViewRecent = async (id: string) => {
+  const handleViewRecent = async (id: number) => {
     setPageState('analysis')
     const useMock = import.meta.env.VITE_USE_MOCK !== 'false'
 
     if (useMock) {
-      if (id === 'task-001') {
-        setTask(buildMockTask('resnet50_v1', 'completed', 3, 3))
+      if (id === 1) {
+        setTask(buildMockTask(1, 'resnet50_v1', 'completed', 3, 3))
         setLayers(MOCK_LAYERS_ALL_PASS)
         setSelectedLayer(null)
         setSelectedFramework('onnxruntime')
-      } else if (id === 'task-002') {
-        setTask(buildMockTask('yolov8_test', 'completed', 2, 3))
+      } else if (id === 2) {
+        setTask(buildMockTask(2, 'yolov8_test', 'completed', 2, 3))
         setLayers(MOCK_LAYERS_HAS_FAIL)
         setSelectedLayer('conv_23')
         setSelectedFramework('onnxruntime')
       } else {
-        setTask(buildMockTask('bert_base_eval', 'failed', 0, 0))
+        setTask(buildMockTask(3, 'bert_base_eval', 'failed', 0, 0))
         setLayers([])
         setSelectedLayer(null)
         setSelectedFramework('onnxruntime')
@@ -655,7 +655,7 @@ export default function ToolPage() {
             <span className="text-sm font-semibold tracking-tight">ModelDiff</span>
           </div>
           <div className="w-px h-4 bg-muted" />
-          <span className="text-xs font-mono font-medium">task_{model?.name ?? task?.model?.name ?? 'unknown'}</span>
+          <span className="text-xs font-mono font-medium">#{task?.id ?? '?'}</span>
           <span className="text-xs text-muted-foreground font-mono">|</span>
           <span className="text-xs text-muted-foreground">{model?.name ?? task?.model?.name}</span>
         </div>

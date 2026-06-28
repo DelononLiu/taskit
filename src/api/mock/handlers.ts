@@ -20,7 +20,7 @@ export const mockApi = {
 
   async createTask(params: CreateTaskParams): Promise<ComparisonTask> {
     await delay(500)
-    const id = `task-${String(taskCounter++).padStart(3, '0')}`
+    const id = taskCounter++
     return {
       ...MOCK_TASK,
       id,
@@ -32,10 +32,10 @@ export const mockApi = {
     }
   },
 
-  async getTask(taskId: string): Promise<ComparisonTask> {
+  async getTask(taskId: number): Promise<ComparisonTask> {
     await delay(300)
     // Simulate progress for new tasks
-    if (taskId >= 'task-002') {
+    if (taskId > 1) {
       const elapsed = Date.now() - new Date(MOCK_TASK.createdAt).getTime()
       const progress = Math.min(100, Math.round((elapsed / 5000) * 100))
       return {
@@ -48,7 +48,7 @@ export const mockApi = {
     return { ...MOCK_TASK, id: taskId }
   },
 
-  async getTaskLayers(_taskId: string, _framework?: string): Promise<LayerDiff[]> {
+  async getTaskLayers(_taskId: number, _framework?: string): Promise<LayerDiff[]> {
     await delay(400)
     return MOCK_LAYER_DIFFS
   },

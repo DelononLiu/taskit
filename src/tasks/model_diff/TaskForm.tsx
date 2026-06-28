@@ -23,7 +23,7 @@ const FW_OPTIONS = [
 ]
 
 interface Props {
-  onTaskCreated: (taskId: string) => void
+  onTaskCreated: (taskId: number) => void
 }
 
 export function ModelDiffForm({ onTaskCreated }: Props) {
@@ -122,22 +122,16 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
     }
   }
 
-  const handleRetry = async (e: React.MouseEvent, id: string) => {
+  const handleRetry = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation()
     const t = await retryTask(id)
     onTaskCreated(t.id)
   }
 
-  const handleViewRecent = async (id: string) => {
+  const handleViewRecent = async (id: number) => {
     const useMock = import.meta.env.VITE_USE_MOCK !== 'false'
     if (useMock) {
-      if (id === 'task-001') {
-        onTaskCreated('mock-resnet50_v1')
-      } else if (id === 'task-002') {
-        onTaskCreated('mock-yolov8_test')
-      } else {
-        onTaskCreated('mock-bert_base_eval')
-      }
+      onTaskCreated(id)
       return
     }
     onTaskCreated(id)

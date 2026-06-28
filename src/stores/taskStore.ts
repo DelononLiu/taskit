@@ -3,7 +3,7 @@ import type { ComparisonTask, LayerDiff, TaskStatus } from '@/types'
 import { createTask as apiCreateTask, getTask, getTaskLayers } from '@/api'
 
 interface TaskState {
-  currentTaskId: string | null
+  currentTaskId: number | null
   task: ComparisonTask | null
   status: TaskStatus
   progress: number
@@ -11,9 +11,9 @@ interface TaskState {
   selectedLayer: string | null
   selectedFramework: string
 
-  createTask: (modelId: string, frameworks: string[]) => Promise<string>
-  pollTask: (taskId: string) => Promise<void>
-  loadLayers: (taskId: string, framework?: string) => Promise<void>
+  createTask: (modelId: string, frameworks: string[]) => Promise<number>
+  pollTask: (taskId: number) => Promise<void>
+  loadLayers: (taskId: number, framework?: string) => Promise<void>
   setSelectedLayer: (layerName: string | null) => void
   setSelectedFramework: (framework: string) => void
   reset: () => void

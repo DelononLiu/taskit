@@ -85,7 +85,9 @@ router.get('/', async (req: Request, res: Response) => {
 // 任务详情
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const task = await prisma.task.findUnique({ where: { id: req.params.id } })
+    const id = parseInt(req.params.id)
+    if (isNaN(id)) return res.status(400).json({ error: 'invalid id' })
+    const task = await prisma.task.findUnique({ where: { id } })
     if (!task) return res.status(404).json({ error: 'not found' })
 
     const resp: any = {
@@ -110,7 +112,9 @@ router.get('/:id', async (req: Request, res: Response) => {
 // 取消任务
 router.post('/:id/cancel', async (req: Request, res: Response) => {
   try {
-    const task = await prisma.task.findUnique({ where: { id: req.params.id } })
+    const id = parseInt(req.params.id)
+    if (isNaN(id)) return res.status(400).json({ error: 'invalid id' })
+    const task = await prisma.task.findUnique({ where: { id } })
     if (!task) return res.status(404).json({ error: 'not found' })
     if (task.status !== 'running' && task.status !== 'pending') {
       return res.status(400).json({ error: `cannot cancel task in status: ${task.status}` })
@@ -131,7 +135,9 @@ router.post('/:id/cancel', async (req: Request, res: Response) => {
 // 重试任务
 router.post('/:id/retry', async (req: Request, res: Response) => {
   try {
-    const task = await prisma.task.findUnique({ where: { id: req.params.id } })
+    const id = parseInt(req.params.id)
+    if (isNaN(id)) return res.status(400).json({ error: 'invalid id' })
+    const task = await prisma.task.findUnique({ where: { id } })
     if (!task) return res.status(404).json({ error: 'not found' })
     if (task.status !== 'failed' && task.status !== 'cancelled') {
       return res.status(400).json({ error: `cannot retry task in status: ${task.status}` })

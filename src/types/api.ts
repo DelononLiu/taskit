@@ -10,5 +10,5 @@ export interface UploadResponse {
 }
 
 export interface TaskCreateResponse {
-  taskId: string
+  taskId: number
 }

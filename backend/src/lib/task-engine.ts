@@ -8,9 +8,9 @@ import { getModule } from '../tasks/registry.js'
 const TASK_TEMP_DIR = path.resolve('temp')
 
 // 管理运行中的子进程，用于取消
-const runningProcesses = new Map<string, ReturnType<typeof spawn>>()
+const runningProcesses = new Map<number, ReturnType<typeof spawn>>()
 
-export function cancelTask(taskId: string): boolean {
+export function cancelTask(taskId: number): boolean {
   const proc = runningProcesses.get(taskId)
   if (!proc) return false
   proc.kill('SIGTERM')
@@ -20,7 +20,7 @@ export function cancelTask(taskId: string): boolean {
   return true
 }
 
-export async function executeTask(taskId: string): Promise<void> {
+export async function executeTask(taskId: number): Promise<void> {
   const task = await prisma.task.findUnique({ where: { id: taskId } })
   if (!task || task.status === 'cancelled') return
 
@@ -56,7 +56,7 @@ export async function executeTask(taskId: string): Promise<void> {
     // 构建命令: shell 模板拿到 taskDir，由 runner 读 input.json 写 output.json
     const cmd = mod.shell
       .replace('{task_dir}', taskDir)
-      .replace('{task_id}', taskId)
+      .replace('{task_id}', String(taskId))
 
     const child = spawn('bash', ['-c', cmd], {
       timeout: 3600_000,

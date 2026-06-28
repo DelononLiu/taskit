@@ -1,9 +1,15 @@
 import type { LayerDiff, ComparisonTask } from '@/types'
 
+export const MOCK_TASK_IDS = {
+  RESNET50: 1,
+  YOLOV8: 2,
+  BERT: 3,
+} as const
+
 export const MOCK_TASKS = [
-  { id: 'task-001', name: 'resnet50_v1',   model: 'resnet50.onnx',      date: '2026-06-26 14:30', status: 'completed' as const, accuracy: '✓ 完美通过', progress: 100 },
-  { id: 'task-002', name: 'yolov8_test',    model: 'yolov8s.onnx',       date: '2026-06-26 11:20', status: 'completed' as const, accuracy: '⚠ 精度超标', progress: 100 },
-  { id: 'task-003', name: 'bert_base_eval', model: 'bert_base.onnx',     date: '2026-06-25 09:15', status: 'failed' as const,    accuracy: '✗ 推理失败', progress: 62 },
+  { id: 1, name: 'resnet50_v1',   model: 'resnet50.onnx',      date: '2026-06-26 14:30', status: 'completed' as const, accuracy: '✓ 完美通过', progress: 100 },
+  { id: 2, name: 'yolov8_test',    model: 'yolov8s.onnx',       date: '2026-06-26 11:20', status: 'completed' as const, accuracy: '⚠ 精度超标', progress: 100 },
+  { id: 3, name: 'bert_base_eval', model: 'bert_base.onnx',     date: '2026-06-25 09:15', status: 'failed' as const,    accuracy: '✗ 推理失败', progress: 62 },
 ]
 export const MOCK_RECENT = MOCK_TASKS
 
@@ -43,10 +49,10 @@ export const MOCK_LAYERS_HAS_FAIL: LayerDiff[] = [
   ]},
 ]
 
-export function buildMockTask(name: string, status: 'completed' | 'failed', passed: number, total: number): ComparisonTask {
+export function buildMockTask(id: number, name: string, status: 'completed' | 'failed', passed: number, total: number): ComparisonTask {
   const allPass = total === passed
   return {
-    id: `mock-${name}`, frameworks: ['onnxruntime', 'tensorrt', 'openvino'], status, progress: status === 'completed' ? 100 : 62,
+    id, frameworks: ['onnxruntime', 'tensorrt', 'openvino'], status, progress: status === 'completed' ? 100 : 62,
     createdAt: '2026-06-26T14:30:00Z',
     model: { id: 'mock-model', name: `${name}.onnx`, format: 'onnx', size: 47185920, uploadTime: '2026-06-26T14:30:00Z' },
     baseline: null,

@@ -3,8 +3,8 @@ import type { ComponentType } from 'react'
 export interface ModuleDef {
   name: string
   icon: string
-  TaskForm: ComponentType<{ onTaskCreated: (taskId: string) => void }>
-  ResultViewer: ComponentType<{ taskId: string; onNewTask: () => void }>
+  TaskForm: ComponentType<{ onTaskCreated: (taskId: number) => void }>
+  ResultViewer: ComponentType<{ taskId: number; onNewTask: () => void }>
 }
 
 export const MODULES: Record<string, ModuleDef> = {

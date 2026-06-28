@@ -12,12 +12,12 @@ import { LayerTable } from '@/pages/TaskDetail/LayerTable'
 import { ExecutionTree } from './ExecutionTree'
 import type { ComparisonTask, LayerDiff, LayerMetric, GraphData } from '@/types'
 import { formatSize, extractArch, mockParams } from './utils'
-import { MOCK_LAYERS_ALL_PASS, MOCK_LAYERS_HAS_FAIL, buildMockTask } from './mockData'
+import { MOCK_TASK_IDS, MOCK_LAYERS_ALL_PASS, MOCK_LAYERS_HAS_FAIL, buildMockTask } from './mockData'
 import { TaskHistoryDrawer } from '@/core/components/TaskHistoryDrawer'
 import { TopNav } from '@/core/components/TopNav'
 
 interface Props {
-  taskId: string
+  taskId: number
   onNewTask: () => void
 }
 
@@ -41,18 +41,18 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
   useEffect(() => {
     const useMock = import.meta.env.VITE_USE_MOCK !== 'false'
     if (useMock) {
-      if (taskId === 'mock-resnet50_v1') {
-        setTask(buildMockTask('resnet50_v1', 'completed', 3, 3))
+      if (taskId === MOCK_TASK_IDS.RESNET50) {
+        setTask(buildMockTask(MOCK_TASK_IDS.RESNET50, 'resnet50_v1', 'completed', 3, 3))
         setLayers(MOCK_LAYERS_ALL_PASS)
         setSelectedLayer(null)
         setSelectedFramework('onnxruntime')
-      } else if (taskId === 'mock-yolov8_test') {
-        setTask(buildMockTask('yolov8_test', 'completed', 2, 3))
+      } else if (taskId === MOCK_TASK_IDS.YOLOV8) {
+        setTask(buildMockTask(MOCK_TASK_IDS.YOLOV8, 'yolov8_test', 'completed', 2, 3))
         setLayers(MOCK_LAYERS_HAS_FAIL)
         setSelectedLayer('conv_23')
         setSelectedFramework('onnxruntime')
       } else {
-        setTask(buildMockTask('bert_base_eval', 'failed', 0, 0))
+        setTask(buildMockTask(MOCK_TASK_IDS.BERT, 'bert_base_eval', 'failed', 0, 0))
         setLayers([])
         setSelectedLayer(null)
         setSelectedFramework('onnxruntime')
@@ -64,7 +64,7 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
     loadRealTask(taskId)
   }, [taskId])
 
-  async function loadRealTask(tid: string) {
+  async function loadRealTask(tid: number) {
     try {
       const t = await getTask(tid)
       setTask(t)
@@ -90,7 +90,7 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
   return (
     <div className="h-screen flex flex-col">
       <TopNav
-        title={`task_${task.model?.name ?? taskId.slice(0, 8)}`}
+        title={`#${task.id}`}
         subtitle={task.model?.name}
         showNewTask
         onNewTask={onNewTask}

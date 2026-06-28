@@ -93,7 +93,7 @@ function generateMockLayerDiffs(): LayerDiff[] {
 export const MOCK_LAYER_DIFFS = generateMockLayerDiffs()
 
 export const MOCK_TASK: ComparisonTask = {
-  id: 'task-001',
+  id: 0,
   model: MOCK_MODEL,
   frameworks: ['onnxruntime', 'tensorrt', 'openvino'],
   status: 'completed',

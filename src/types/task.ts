@@ -4,7 +4,7 @@ import type { FrameworkResult } from './framework'
 export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
 
 export interface ComparisonTask {
-  id: string
+  id: number
   model: ModelFile
   frameworks: string[]
   status: TaskStatus
