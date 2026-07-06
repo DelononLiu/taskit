@@ -34,6 +34,16 @@ export const mockApi = {
 
   async getTask(taskId: number): Promise<ComparisonTask> {
     await delay(300)
+    // Failed mock task
+    if (taskId === 3) {
+      return {
+        ...MOCK_TASK,
+        id: taskId,
+        status: 'failed',
+        progress: 62,
+        error: '推理失败: 模型不兼容 (BertBase 未实现 fused attention)',
+      }
+    }
     // Simulate progress for new tasks
     if (taskId > 1) {
       const elapsed = Date.now() - new Date(MOCK_TASK.createdAt).getTime()
