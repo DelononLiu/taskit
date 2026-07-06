@@ -14,7 +14,7 @@ interface TopNavProps {
 }
 
 export function TopNav({ title, subtitle, showNewTask, onNewTask, onOpenHistory }: TopNavProps) {
-  const { toggleTheme } = useUIStore()
+  const { theme, toggleTheme } = useUIStore()
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -57,7 +57,7 @@ export function TopNav({ title, subtitle, showNewTask, onNewTask, onOpenHistory 
           </Button>
         )}
 
-        <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={toggleTheme}>☀</button>
+        <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={toggleTheme} title={theme === 'dark' ? '切换到亮色' : '切换到暗色'}>{theme === 'dark' ? '☀' : '☾'}</button>
 
         {user ? (
           <div className="relative">
