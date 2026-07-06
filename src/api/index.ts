@@ -1,2 +1,2 @@
 export { uploadModel } from './model'
-export { createTask, getTask, getTaskLayers } from './task'
+export { createTask, getTask, getTaskLayers, getTaskHistory, cancelTask, retryTask } from './task'
