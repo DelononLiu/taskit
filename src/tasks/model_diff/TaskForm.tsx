@@ -17,12 +17,14 @@ import { TaskHistoryDrawer } from '@/core/components/TaskHistoryDrawer'
 import { TopNav } from '@/core/components/TopNav'
 import { FW_OPTIONS } from './constants'
 import { USE_MOCK } from '@/lib/env'
+import { useToast } from '@/components/ui/toast'
 
 interface Props {
   onTaskCreated: (taskId: number) => void
 }
 
 export function ModelDiffForm({ onTaskCreated }: Props) {
+  const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
   const [boxState, setBoxState] = useState<'empty' | 'config' | 'running'>('empty')
@@ -112,12 +114,14 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
           ])
           if (updated.status === 'completed') {
             setRunning(false)
+            toast({ title: '分析完成', description: `任务 #${t.id} 已完成` })
             onTaskCreated(t.id)
             pollRefsRef.current.delete(t.id)
             return
           }
           if (updated.status === 'failed') {
             setRunning(false)
+            toast({ title: '分析失败', description: updated.error || '未知错误', variant: 'destructive' })
             pollRefsRef.current.delete(t.id)
             return
           }
@@ -131,6 +135,7 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
     } catch {
       setBoxState('config')
       setRunning(false)
+      toast({ title: '分析启动失败', description: '请检查网络连接后重试', variant: 'destructive' })
     }
   }
 
