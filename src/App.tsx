@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import HomePage from '@/core/pages/HomePage'
-import TaskPage from '@/core/pages/TaskPage'
+import TaskitPage from '@/pages/TaskitPage'
 import { AuthPage } from '@/core/components/AuthPage'
 import { AuthGuard } from '@/core/components/AuthGuard'
 
@@ -9,8 +8,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<AuthPage />} />
-        <Route path="/" element={<AuthGuard><HomePage /></AuthGuard>} />
-        <Route path="/tasks/:id" element={<AuthGuard><TaskPage /></AuthGuard>} />
+        <Route path="/" element={<AuthGuard><TaskitPage /></AuthGuard>} />
+        <Route path="/tasks/:id" element={<AuthGuard><TaskitPage /></AuthGuard>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
