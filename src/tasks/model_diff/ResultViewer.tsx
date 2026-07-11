@@ -10,6 +10,7 @@ import { getTask, getTaskLayers } from '@/api/task'
 import { OverviewChart } from './OverviewChart'
 import { LayerTable } from './LayerTable'
 import { ExecutionTree } from './ExecutionTree'
+import { LayerTooltip } from './LayerTooltip'
 import type { ComparisonTask, LayerDiff, LayerMetric, GraphData } from '@/types'
 import { formatSize, extractArch, mockParams } from './utils'
 import { MOCK_TASK_IDS, MOCK_LAYERS_ALL_PASS, MOCK_LAYERS_HAS_FAIL, buildMockTask } from './mockData'
@@ -194,87 +195,12 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
           )}
         </div>
 
-        {/* Right panel */}
+        {/* Floating layer tooltip */}
         {selectedLayerData && (
-          <div className="w-[380px] shrink-0 border-l border-muted overflow-y-auto">
-            <div className="sticky top-0 bg-card z-10 flex items-center justify-between px-4 py-2.5 border-b border-muted">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="font-mono text-sm font-semibold truncate">{selectedLayerData.layerName}</span>
-                <Badge variant="outline" className="text-[10px] font-mono border-muted-foreground/30 shrink-0">
-                  {selectedLayerData.layerType}
-                </Badge>
-              </div>
-              <button className="text-xs text-muted-foreground hover:text-foreground shrink-0"
-                onClick={() => setSelectedLayer(null)}>✕</button>
-            </div>
-            <div className="p-4 space-y-4">
-              <div className="text-xs text-muted-foreground font-mono bg-muted/50 rounded-md p-2.5">
-                输入 [{selectedLayerData.inputShape.join(', ')}] → 输出 [{selectedLayerData.outputShape.join(', ')}]
-              </div>
-              {selectedLayerData.metrics.map((m) => {
-                const cfg = FW_OPTIONS.find((o) => o.value === m.frameworkId)
-                return (
-                  <div key={m.frameworkId}>
-                    <h4 className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: cfg?.color }}>
-                      <span className="w-2 h-2 rounded-full" style={{ background: cfg?.color }} />
-                      {cfg?.label}
-                    </h4>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {[
-                        { key: 'cosineSimilarity', label: '余弦相似度', val: m.cosineSimilarity },
-                        { key: 'maxAbsError', label: '最大绝对误差', val: m.maxAbsError },
-                        { key: 'meanAbsError', label: '平均绝对误差', val: m.meanAbsError },
-                        { key: 'snr', label: '信噪比', val: m.snr, unit: 'dB' },
-                      ].map((item) => {
-                        const val = item.val as number
-                        const passed = item.key === 'cosineSimilarity' || item.key === 'snr'
-                          ? val >= (item.key === 'cosineSimilarity' ? 0.99 : 20)
-                          : val <= (item.key === 'maxAbsError' ? 0.01 : 0.005)
-                        return (
-                          <div key={item.key}
-                            className={cn('p-2 rounded-md border text-xs', passed ? 'border-pass/20 bg-pass/5' : 'border-fail/20 bg-fail/5')}>
-                            <div className="text-muted-foreground text-[10px] mb-0.5">{item.label}</div>
-                            <span className="font-mono text-sm font-bold tabular-nums" style={{ color: passed ? '#22c55e' : '#ef4444' }}>
-                              {item.key === 'cosineSimilarity' ? val.toFixed(6) : val.toExponential(4)}
-                              {item.unit && <span className="text-muted-foreground text-[10px] font-normal ml-0.5">{item.unit}</span>}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    {/* 逐维余弦分布 */}
-                    {m.dimCosineStats && (
-                      <div className="col-span-2 mt-1 p-2 rounded-md border border-muted bg-muted/20">
-                        <div className="text-muted-foreground text-[10px] mb-1.5 font-medium">逐维余弦分布</div>
-                        <div className="flex items-center gap-3 text-xs mb-2">
-                          <span>min: <span className="font-mono text-fail">{m.dimCosineStats.min.toFixed(6)}</span></span>
-                          <span>mean: <span className="font-mono" style={{ color: m.dimCosineStats.mean >= 0.99 ? '#22c55e' : '#ef4444' }}>{m.dimCosineStats.mean.toFixed(6)}</span></span>
-                          <span>max: <span className="font-mono text-pass">{m.dimCosineStats.max.toFixed(6)}</span></span>
-                        </div>
-                        <div className="flex items-end gap-[2px] h-8">
-                          {m.dimCosineStats.histogram.map((bucket, bi) => {
-                            const isGood = bucket.lo >= 0.99
-                            const total = m.dimCosineStats!.histogram.reduce((s, b) => s + b.count, 0)
-                            const pct = total > 0 ? bucket.count / total : 0
-                            return (
-                              <div key={bi} className="flex-1 flex flex-col items-center gap-0.5">
-                                <div className="w-full rounded-sm transition-all" style={{
-                                  height: `${Math.max(4, pct * 64)}px`,
-                                  background: isGood ? '#22c55e' : '#ef4444',
-                                  opacity: isGood ? 0.5 : 0.85,
-                                }} title={`[${bucket.lo.toFixed(4)}, ${bucket.hi.toFixed(4)}) = ${bucket.count}`} />
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+          <LayerTooltip
+            layer={selectedLayerData}
+            onClose={() => setSelectedLayer(null)}
+          />
         )}
       </div>
 
