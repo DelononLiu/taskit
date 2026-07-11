@@ -31,10 +31,12 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
   const [model, setModel] = useState<ModelFile | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [comparisonFws, setComparisonFws] = useState<string[]>(['tensorrt'])
+  const [comparisonSlots, setComparisonSlots] = useState<{ frameworkId: string; precision: string }[]>([
+    { frameworkId: 'tensorrt', precision: 'auto' },
+  ])
   const [baselineFw, setBaselineFw] = useState('onnxruntime')
+  const [baselinePrecision, setBaselinePrecision] = useState('auto')
   const [batchSize, setBatchSize] = useState('4')
-  const [precision, setPrecision] = useState('auto')
   const [inputSource, setInputSource] = useState<'random' | 'text' | 'file'>('random')
   const [inputText, setInputText] = useState('')
   const [task, setTask] = useState<ComparisonTask | null>(null)
@@ -73,7 +75,27 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
   }
 
   const handleRun = async () => {
-    if (!selectedFile || comparisonFws.length === 0) return
+    if (!selectedFile || comparisonSlots.length === 0) return
+
+    // Validation: check for duplicate framework+precision combos
+    const allSlots = [
+      { frameworkId: 'onnxruntime', precision: baselinePrecision },
+      ...comparisonSlots,
+    ]
+    const seen = new Set<string>()
+    for (const slot of allSlots) {
+      const key = `${slot.frameworkId}:${slot.precision}`
+      if (seen.has(key)) {
+        toast({
+          title: '配置冲突',
+          description: `${FW_OPTIONS.find(f => f.value === slot.frameworkId)?.label} (${slot.precision}) 重复配置，请调整`,
+          variant: 'destructive',
+        })
+        return
+      }
+      seen.add(key)
+    }
+
     setBoxState('running')
     setRunning(true)
     setLogs([])
@@ -86,11 +108,15 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
       setUploadProgress(100)
 
       // Phase 2: create analysis task
+      const allFrameworks = [baselineFw, ...comparisonSlots.map(s => s.frameworkId)]
       const t = await createTask({
         modelId: m.id,
-        frameworks: [...new Set([baselineFw, ...comparisonFws])],
+        frameworks: [...new Set(allFrameworks)],
         params: {
-          precision,
+          slots: [
+            { frameworkId: 'onnxruntime', precision: baselinePrecision },
+            ...comparisonSlots,
+          ],
           batchSize: Number(batchSize),
           inputSource,
           ...(inputSource === 'text' ? { inputText } : {}),
@@ -110,7 +136,7 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
           setTask(updated)
           setLogs((prev) => [
             ...prev,
-            `[${new Date().toLocaleTimeString()}] ${comparisonFws.join('/')} 执行中 ${updated.progress}%`,
+            `[${new Date().toLocaleTimeString()}] ${comparisonSlots.map(s => s.frameworkId).join('/')} 执行中 ${updated.progress}%`,
           ])
           if (updated.status === 'completed') {
             setRunning(false)
@@ -198,29 +224,34 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
               <div className="h-px bg-border" />
               <div className="space-y-3">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">配置比对参数</p>
-                {/* Framework selectors — three columns */}
+                {/* Framework selectors — three columns with per-slot precision */}
                 <div className="grid grid-cols-3 gap-3">
                   {/* Baseline — always ONNX Runtime */}
-                  <div className="border border-[#1677ff]/20 rounded-lg p-3 bg-[#1677ff]/5">
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">基准</div>
-                    <div className="flex items-center gap-2">
+                  <div className="border border-[#1677ff]/20 rounded-lg py-2.5 px-3 bg-[#1677ff]/5">
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">基准</div>
+                    <div className="flex items-center gap-1.5 mb-1.5">
                       <span className="w-2 h-2 rounded-full shrink-0" style={{ background: '#1677ff' }} />
-                      <span className="text-sm font-semibold">ONNX Runtime</span>
+                      <span className="text-xs font-semibold">ONNX Runtime</span>
                     </div>
-                    <div className="text-[10px] text-muted-foreground/60 mt-1">推理结果作为精度基准</div>
+                    <Select value={baselinePrecision} onValueChange={setBaselinePrecision}>
+                      <SelectTrigger className="h-7 text-[11px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {['auto', 'fp32', 'fp16', 'int8', 'uint8'].map((p) => (
+                          <SelectItem key={p} value={p} className="text-xs">{p.toUpperCase()}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  {/* Comparison framework 1 */}
-                  <div className="border border-[#9333ea]/20 rounded-lg p-3 bg-[#9333ea]/5">
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">对比框架 1</div>
-                    <Select value={comparisonFws[0] || ''} onValueChange={(v) => {
-                      setComparisonFws([v])
+                  {/* Comparison slot 1 */}
+                  <div className="border border-[#9333ea]/20 rounded-lg py-2.5 px-3 bg-[#9333ea]/5">
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">对比 1</div>
+                    <Select value={comparisonSlots[0]?.frameworkId || ''} onValueChange={(v) => {
+                      setComparisonSlots([{ ...comparisonSlots[0], frameworkId: v }])
                     }}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="选择框架" />
-                      </SelectTrigger>
+                      <SelectTrigger className="h-7 text-[11px] mb-1"><SelectValue placeholder="框架" /></SelectTrigger>
                       <SelectContent>
-                        {FW_OPTIONS.filter((fw) => fw.value !== 'onnxruntime' && fw.value !== comparisonFws[1]).map((fw) => (
+                        {FW_OPTIONS.map((fw) => (
                           <SelectItem key={fw.value} value={fw.value} className="text-xs">
                             <span className="flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: fw.color }} />
@@ -230,20 +261,32 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
                         ))}
                       </SelectContent>
                     </Select>
+                    <Select value={comparisonSlots[0]?.precision || 'auto'} onValueChange={(v) => {
+                      setComparisonSlots([{ ...comparisonSlots[0], precision: v }])
+                    }}>
+                      <SelectTrigger className="h-7 text-[11px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {['auto', 'fp32', 'fp16', 'int8', 'uint8'].map((p) => (
+                          <SelectItem key={p} value={p} className="text-xs">{p.toUpperCase()}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  {/* Comparison framework 2 — optional */}
-                  {comparisonFws.length >= 2 ? (
-                    <div className="border border-[#f97316]/20 rounded-lg p-3 bg-[#f97316]/5">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">对比框架 2</span>
-                        <button onClick={() => setComparisonFws([comparisonFws[0]])}
-                          className="text-xs text-muted-foreground hover:text-foreground">✕</button>
+                  {/* Comparison slot 2 — optional */}
+                  {comparisonSlots.length >= 2 ? (
+                    <div className="border border-[#f97316]/20 rounded-lg py-2.5 px-3 bg-[#f97316]/5">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">对比 2</span>
+                        <button onClick={() => setComparisonSlots([comparisonSlots[0]])}
+                          className="text-[10px] text-muted-foreground hover:text-foreground">✕</button>
                       </div>
-                      <Select value={comparisonFws[1]} onValueChange={(v) => setComparisonFws([comparisonFws[0], v])}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <Select value={comparisonSlots[1]?.frameworkId || ''} onValueChange={(v) => {
+                        setComparisonSlots([comparisonSlots[0], { ...comparisonSlots[1], frameworkId: v }])
+                      }}>
+                        <SelectTrigger className="h-7 text-[11px] mb-1"><SelectValue placeholder="框架" /></SelectTrigger>
                         <SelectContent>
-                          {FW_OPTIONS.filter((fw) => fw.value !== 'onnxruntime' && fw.value !== comparisonFws[0]).map((fw) => (
+                          {FW_OPTIONS.map((fw) => (
                             <SelectItem key={fw.value} value={fw.value} className="text-xs">
                               <span className="flex items-center gap-1.5">
                                 <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: fw.color }} />
@@ -253,15 +296,26 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
                           ))}
                         </SelectContent>
                       </Select>
+                      <Select value={comparisonSlots[1]?.precision || 'auto'} onValueChange={(v) => {
+                        setComparisonSlots([comparisonSlots[0], { ...comparisonSlots[1], precision: v }])
+                      }}>
+                        <SelectTrigger className="h-7 text-[11px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {['auto', 'fp32', 'fp16', 'int8', 'uint8'].map((p) => (
+                            <SelectItem key={p} value={p} className="text-xs">{p.toUpperCase()}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   ) : (
                     <button onClick={() => {
-                      const remaining = FW_OPTIONS.find((fw) => fw.value !== 'onnxruntime' && fw.value !== comparisonFws[0])
-                      if (remaining) setComparisonFws([...comparisonFws, remaining.value])
+                      const used = comparisonSlots.map(s => s.frameworkId)
+                      const first = FW_OPTIONS.find(fw => !used.includes(fw.value)) || FW_OPTIONS[0]
+                      setComparisonSlots([...comparisonSlots, { frameworkId: first.value, precision: 'auto' }])
                     }}
-                      className="border border-dashed border-border rounded-lg p-3 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground hover:border-muted-foreground/40 transition-colors cursor-pointer">
+                      className="border border-dashed border-border rounded-lg py-2.5 px-3 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground hover:border-muted-foreground/40 transition-colors cursor-pointer">
                       <span className="text-lg leading-none">+</span>
-                      <span className="text-[10px]">添加对比框架 2</span>
+                      <span className="text-[10px]">添加对比</span>
                     </button>
                   )}
                 </div>
@@ -285,19 +339,12 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
                         </SelectContent>
                       </Select>
                     </div>
-                    {/* Precision */}
+                    {/* Precision (info only — per-framework precision is in cards above) */}
                     <div className="space-y-1.5">
                       <label className="text-xs text-muted-foreground">推理精度</label>
-                      <Select value={precision} onValueChange={setPrecision}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="auto" className="text-xs">AUTO</SelectItem>
-                          <SelectItem value="fp32" className="text-xs">FP32（全精度）</SelectItem>
-                          <SelectItem value="fp16" className="text-xs">FP16（半精度）</SelectItem>
-                          <SelectItem value="int8" className="text-xs">INT8（熵校准）</SelectItem>
-                          <SelectItem value="uint8" className="text-xs">UINT8</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="h-8 flex items-center text-xs text-muted-foreground/60">
+                        已在上方按框架分别设置
+                      </div>
                     </div>
                     {/* Input source */}
                     <div className="space-y-1.5 col-span-2">
@@ -329,10 +376,10 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
               </div>
               <div className="h-px bg-border" />
               <Button className="w-full h-10 text-sm gap-2"
-                disabled={comparisonFws.length === 0} onClick={handleRun}>
+                disabled={comparisonSlots.length === 0} onClick={handleRun}>
                 <Layers className="h-4 w-4" />
-                {comparisonFws.length > 0
-                  ? `开始分析（${comparisonFws.join(' + ')}）`
+                {comparisonSlots.length > 0
+                  ? `开始分析（${comparisonSlots.map(s => `${FW_OPTIONS.find(f => f.value === s.frameworkId)?.label || s.frameworkId} ${s.precision.toUpperCase()}`).join(' + ')}）`
                   : '请选择对比框架'}
               </Button>
             </div>

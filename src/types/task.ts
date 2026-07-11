@@ -21,6 +21,7 @@ export interface CreateTaskParams {
   frameworks: string[]
   params?: {
     precision?: string
+    slots?: { frameworkId: string; precision: string }[]
     batchSize?: number
     inputSource?: string
     inputText?: string
