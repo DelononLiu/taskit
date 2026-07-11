@@ -93,31 +93,7 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
       />
 
       <div className="flex-1 flex min-h-0 bg-muted/30">
-        <div className={cn(
-          'flex-1 min-w-0 overflow-y-auto p-5 space-y-4',
-          selectedLayerData && 'pr-0'
-        )}>
-          {/* Select framework */}
-          <div className="flex items-center justify-end">
-            <Select value={selectedFramework} onValueChange={(v) => { setSelectedFramework(v); setSelectedLayer(null) }}>
-              <SelectTrigger className="h-7 w-28 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(task.frameworks ?? []).map((fw: string) => {
-                  const cfg = FW_OPTIONS.find((o) => o.value === fw)
-                  return (
-                    <SelectItem key={fw} value={fw} className="text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: cfg?.color }} />
-                        {cfg?.label}
-                      </span>
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className={'flex-1 min-w-0 overflow-y-auto p-5 space-y-4'}>
 
           {/* Model Info */}
           {task && (
@@ -160,13 +136,15 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
                 {layers.length === 0 && <p className="text-[11px] text-muted-foreground/60 py-1">无数据</p>}
                 {[...layers]
                   .sort((a, b) => {
-                    const ma = a.metrics.find((m: LayerMetric) => m.frameworkId === selectedFramework)
-                    const mb = b.metrics.find((m: LayerMetric) => m.frameworkId === selectedFramework)
-                    return (ma?.cosineSimilarity ?? 1) - (mb?.cosineSimilarity ?? 1)
+                    const aMin = Math.min(...a.metrics.map((m: LayerMetric) => m.cosineSimilarity))
+                    const bMin = Math.min(...b.metrics.map((m: LayerMetric) => m.cosineSimilarity))
+                    return aMin - bMin
                   })
                   .map((l) => {
-                    const m = l.metrics.find((m: LayerMetric) => m.frameworkId === selectedFramework)
-                    if (!m) return null
+                    // Show the worst metric across all frameworks
+                    const worst = l.metrics.reduce((worst: LayerMetric | null, m: LayerMetric) =>
+                      !worst || m.cosineSimilarity < worst.cosineSimilarity ? m : worst, null as LayerMetric | null)
+                    if (!worst) return null
                     return (
                       <button key={l.layerName} onClick={() => setSelectedLayer(l.layerName)}
                         className={cn(
@@ -174,8 +152,8 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
                           selectedLayer === l.layerName ? 'bg-accent' : 'hover:bg-accent/50'
                         )}>
                         <span className="text-[11px] font-mono text-muted-foreground truncate">{l.layerName}</span>
-                        <span className={cn('font-mono text-xs font-bold tabular-nums shrink-0', m.passed ? 'text-pass' : 'text-fail')}>
-                          {m.cosineSimilarity.toFixed(4)}
+                        <span className={cn('font-mono text-xs font-bold tabular-nums shrink-0', worst.passed ? 'text-pass' : 'text-fail')}>
+                          {worst.cosineSimilarity.toFixed(4)}
                         </span>
                       </button>
                     )
@@ -197,7 +175,7 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
             </div>
             <LayerTable
               layers={layers}
-              frameworkId={selectedFramework}
+              frameworkIds={task?.frameworks ?? []}
               loading={layersLoading}
               onSelectLayer={(l) => setSelectedLayer(l.layerName)}
               selectedLayerName={selectedLayer}
