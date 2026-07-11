@@ -233,58 +233,68 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
                       ))}
                     </div>
                   </div>
-                  {/* Batch size */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs text-muted-foreground">Batch Size</label>
-                    <Select value={batchSize} onValueChange={setBatchSize}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 4, 8, 16, 32].map((v) => (
-                          <SelectItem key={v} value={String(v)} className="text-xs">{v}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {/* Precision */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs text-muted-foreground">推理精度</label>
-                    <Select value={precision} onValueChange={setPrecision}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="auto" className="text-xs">AUTO</SelectItem>
-                        <SelectItem value="fp32" className="text-xs">FP32（全精度）</SelectItem>
-                        <SelectItem value="fp16" className="text-xs">FP16（半精度）</SelectItem>
-                        <SelectItem value="int8" className="text-xs">INT8（熵校准）</SelectItem>
-                        <SelectItem value="uint8" className="text-xs">UINT8</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
-                {/* Input source */}
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground">输入数据</label>
-                  <div className="flex flex-wrap gap-2">
-                    {(['random', 'text', 'file'] as const).map((src) => (
-                      <button key={src} onClick={() => setInputSource(src)}
-                        className={cn('px-3 py-1.5 rounded-md text-xs font-medium border transition-colors',
-                          inputSource === src ? 'bg-accent border-border text-accent-foreground'
-                            : 'border-border/50 text-muted-foreground hover:border-border')}>
-                        {src === 'random' ? '随机数据' : src === 'text' ? '文本输入' : '文件输入'}
-                      </button>
-                    ))}
-                  </div>
-                  {inputSource === 'text' && (
-                    <textarea value={inputText} onChange={(e) => setInputText(e.target.value)}
-                      placeholder="输入推理文本..."
-                      className="w-full mt-1.5 h-20 rounded-md border border-input bg-background px-3 py-2 text-xs outline-none focus:border-ring resize-none" />
-                  )}
-                  {inputSource === 'file' && (
-                    <div className="mt-1.5 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-accent/30 transition-colors"
-                      onClick={() => fileInputRef.current?.click()}>
-                      <p className="text-xs text-muted-foreground">点击选择输入数据文件</p>
+
+                {/* 更多推理配置 — collapsed */}
+                <details className="group">
+                  <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-none list-none flex items-center gap-1">
+                    <span className="transition-transform group-open:rotate-90 text-[10px]">▶</span>
+                    更多推理配置
+                  </summary>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    {/* Batch size */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">Batch Size</label>
+                      <Select value={batchSize} onValueChange={setBatchSize}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 4, 8, 16, 32].map((v) => (
+                            <SelectItem key={v} value={String(v)} className="text-xs">{v}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  )}
-                </div>
+                    {/* Precision */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">推理精度</label>
+                      <Select value={precision} onValueChange={setPrecision}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="auto" className="text-xs">AUTO</SelectItem>
+                          <SelectItem value="fp32" className="text-xs">FP32（全精度）</SelectItem>
+                          <SelectItem value="fp16" className="text-xs">FP16（半精度）</SelectItem>
+                          <SelectItem value="int8" className="text-xs">INT8（熵校准）</SelectItem>
+                          <SelectItem value="uint8" className="text-xs">UINT8</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* Input source */}
+                    <div className="space-y-1.5 col-span-2">
+                      <label className="text-xs text-muted-foreground">输入数据</label>
+                      <div className="flex flex-wrap gap-2">
+                        {(['random', 'text', 'file'] as const).map((src) => (
+                          <button key={src} onClick={() => setInputSource(src)}
+                            className={cn('px-3 py-1.5 rounded-md text-xs font-medium border transition-colors',
+                              inputSource === src ? 'bg-accent border-border text-accent-foreground'
+                                : 'border-border/50 text-muted-foreground hover:border-border')}>
+                            {src === 'random' ? '随机数据' : src === 'text' ? '文本输入' : '文件输入'}
+                          </button>
+                        ))}
+                      </div>
+                      {inputSource === 'text' && (
+                        <textarea value={inputText} onChange={(e) => setInputText(e.target.value)}
+                          placeholder="输入推理文本..."
+                          className="w-full mt-1.5 h-20 rounded-md border border-input bg-background px-3 py-2 text-xs outline-none focus:border-ring resize-none" />
+                      )}
+                      {inputSource === 'file' && (
+                        <div className="mt-1.5 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-accent/30 transition-colors"
+                          onClick={() => fileInputRef.current?.click()}>
+                          <p className="text-xs text-muted-foreground">点击选择输入数据文件</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </details>
               </div>
               <div className="h-px bg-border" />
               <Button className="w-full h-10 text-sm gap-2"
