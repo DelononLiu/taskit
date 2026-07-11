@@ -1,4 +1,4 @@
-import type { LayerDiff, ComparisonTask } from '@/types'
+import type { LayerDiff, ComparisonTask, GraphData } from '@/types'
 
 export const MOCK_TASK_IDS = {
   RESNET50: 1,
@@ -65,4 +65,22 @@ export function buildMockTask(id: number, name: string, status: 'completed' | 'f
         overallMetrics: { totalLayers: total, passedLayers: passed, failedLayers: total - passed, avgCosineSimilarity: allPass ? 0.999996 : 0.943, maxAbsError: allPass ? 0.000018 : 0.242, worstLayer: allPass ? null : 'conv_23' } },
     ],
   }
+}
+
+export const MOCK_GRAPH_DATA: GraphData = {
+  nodes: [
+    { name: 'input', opType: 'Input', depth: 0, isLeaf: false, cosineSimilarity: null },
+    { name: 'conv_1', opType: 'Conv', depth: 1, isLeaf: false, cosineSimilarity: 0.999999 },
+    { name: 'conv_23', opType: 'Conv', depth: 2, isLeaf: false, cosineSimilarity: 0.920400 },
+    { name: 'relu_1', opType: 'Relu', depth: 2, isLeaf: false, cosineSimilarity: 0.999998 },
+    { name: 'fc_output', opType: 'Gemm', depth: 3, isLeaf: true, cosineSimilarity: 0.999997 },
+  ],
+  edges: [
+    { from: 'input', to: 'conv_1' },
+    { from: 'conv_1', to: 'conv_23' },
+    { from: 'conv_1', to: 'relu_1' },
+    { from: 'conv_23', to: 'fc_output' },
+    { from: 'relu_1', to: 'fc_output' },
+  ],
+  outputs: ['fc_output'],
 }
