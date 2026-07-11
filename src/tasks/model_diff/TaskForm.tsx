@@ -15,12 +15,7 @@ import { formatSize, extractArch, mockParams } from './utils'
 import { MOCK_RECENT, MOCK_TASKS, MOCK_LAYERS_ALL_PASS, MOCK_LAYERS_HAS_FAIL, buildMockTask } from './mockData'
 import { TaskHistoryDrawer } from '@/core/components/TaskHistoryDrawer'
 import { TopNav } from '@/core/components/TopNav'
-
-const FW_OPTIONS = [
-  { value: 'onnxruntime', label: 'ONNX Runtime', color: '#1677ff' },
-  { value: 'tensorrt', label: 'TensorRT', color: '#9333ea' },
-  { value: 'openvino', label: 'OpenVINO', color: '#f97316' },
-]
+import { FW_OPTIONS } from './constants'
 
 interface Props {
   onTaskCreated: (taskId: number) => void
