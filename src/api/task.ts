@@ -1,8 +1,7 @@
 import { api } from './client'
 import { mockApi } from './mock/handlers'
 import type { CreateTaskParams, ComparisonTask, LayerDiff, LayersResponse } from '@/types'
-
-const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
+import { USE_MOCK } from '@/lib/env'
 
 function getToken() {
   return localStorage.getItem('token') || ''

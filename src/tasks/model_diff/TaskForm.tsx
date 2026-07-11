@@ -16,6 +16,7 @@ import { MOCK_RECENT, MOCK_TASKS, MOCK_LAYERS_ALL_PASS, MOCK_LAYERS_HAS_FAIL, bu
 import { TaskHistoryDrawer } from '@/core/components/TaskHistoryDrawer'
 import { TopNav } from '@/core/components/TopNav'
 import { FW_OPTIONS } from './constants'
+import { USE_MOCK } from '@/lib/env'
 
 interface Props {
   onTaskCreated: (taskId: number) => void
@@ -42,8 +43,7 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
 
   // 加载真实最近任务
   useEffect(() => {
-    const useMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (useMock) {
+    if (USE_MOCK) {
       setRecentTasks(MOCK_RECENT)
     } else {
       getTaskHistory(1, 3).then((tasks) => setRecentTasks(tasks as any)).catch(() => {})
@@ -124,8 +124,7 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
   }
 
   const handleViewRecent = async (id: number) => {
-    const useMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (useMock) {
+    if (USE_MOCK) {
       onTaskCreated(id)
       return
     }

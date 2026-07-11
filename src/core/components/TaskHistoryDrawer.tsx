@@ -3,6 +3,7 @@ import { Search, Clock, FileIcon, RotateCw } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { getTaskHistory, retryTask } from '@/api/task'
+import { USE_MOCK } from '@/lib/env'
 
 interface HistoryItem {
   id: number
@@ -37,8 +38,7 @@ export function TaskHistoryDrawer({ open, onOpenChange, onSelect }: Props) {
   useEffect(() => {
     if (!open) return
     setLoading(true)
-    const useMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (useMock) {
+    if (USE_MOCK) {
       import('@/tasks/model_diff/mockData').then(({ MOCK_TASKS }) => {
         setTasks(MOCK_TASKS as any)
         setLoading(false)

@@ -1,8 +1,7 @@
 import { api } from './client'
 import { mockApi } from './mock/handlers'
 import type { ModelFile } from '@/types'
-
-const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
+import { USE_MOCK } from '@/lib/env'
 
 export async function uploadModel(file: File, onProgress?: (pct: number) => void): Promise<ModelFile> {
   if (USE_MOCK) {

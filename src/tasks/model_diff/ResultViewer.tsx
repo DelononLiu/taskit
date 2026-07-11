@@ -16,6 +16,7 @@ import { MOCK_TASK_IDS, MOCK_LAYERS_ALL_PASS, MOCK_LAYERS_HAS_FAIL, buildMockTas
 import { TaskHistoryDrawer } from '@/core/components/TaskHistoryDrawer'
 import { TopNav } from '@/core/components/TopNav'
 import { FW_OPTIONS } from './constants'
+import { USE_MOCK } from '@/lib/env'
 
 interface Props {
   taskId: number
@@ -34,8 +35,7 @@ export function ModelDiffResult({ taskId, onNewTask }: Props) {
   const selectedLayerData = layers.find((l) => l.layerName === selectedLayer) ?? null
 
   useEffect(() => {
-    const useMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (useMock) {
+    if (USE_MOCK) {
       if (taskId === MOCK_TASK_IDS.RESNET50) {
         setTask(buildMockTask(MOCK_TASK_IDS.RESNET50, 'resnet50_v1', 'completed', 3, 3))
         setLayers(MOCK_LAYERS_ALL_PASS)
