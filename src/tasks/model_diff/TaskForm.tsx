@@ -40,6 +40,13 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
   const [logs, setLogs] = useState<string[]>([])
   const [historyOpen, setHistoryOpen] = useState(false)
   const [recentTasks, setRecentTasks] = useState<typeof MOCK_RECENT>([])
+  const pollRefsRef = useRef<Map<number, { current: boolean }>>(new Map())
+  useEffect(() => {
+    return () => {
+      pollRefsRef.current.forEach((ref) => { ref.current = false })
+      pollRefsRef.current.clear()
+    }
+  }, [])
 
   // 加载真实最近任务
   useEffect(() => {
@@ -89,28 +96,38 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
       })
       setTask(t)
 
-      // Phase 3: poll for results
-      const poll = setInterval(async () => {
+      // Phase 3: poll for results (safe setTimeout with cleanup)
+      const pollRef = { current: true }
+      pollRefsRef.current.set(t.id, pollRef)
+
+      const poll = async () => {
+        if (!pollRef.current) return
         try {
           const updated = await getTask(t.id)
+          if (!pollRef.current) return
           setTask(updated)
           setLogs((prev) => [
             ...prev,
             `[${new Date().toLocaleTimeString()}] ${comparisonFws.join('/')} 执行中 ${updated.progress}%`,
           ])
           if (updated.status === 'completed') {
-            clearInterval(poll)
             setRunning(false)
             onTaskCreated(t.id)
+            pollRefsRef.current.delete(t.id)
+            return
           }
           if (updated.status === 'failed') {
-            clearInterval(poll)
             setRunning(false)
+            pollRefsRef.current.delete(t.id)
+            return
           }
+          setTimeout(poll, 1500)
         } catch (e) {
           console.error('poll error', e)
+          if (pollRef.current) setTimeout(poll, 1500)
         }
-      }, 1500)
+      }
+      poll()
     } catch {
       setBoxState('config')
       setRunning(false)
