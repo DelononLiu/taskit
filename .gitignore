@@ -20,3 +20,5 @@ backend/uploads/
 backend/prisma/*.db
 backend/prisma/*.db-journal
 backend/.env
+
+.superpowers/
