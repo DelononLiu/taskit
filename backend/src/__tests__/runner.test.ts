@@ -9,9 +9,8 @@ describe('model_diff runner', () => {
     expect(mod.name).toBe('模型精度比对')
   })
 
-  it('has a shell command template', () => {
-    expect(mod.shell).toContain('run-onnx.sh')
-    expect(mod.shell).toContain('{task_dir}')
+  it('has a runner configured', () => {
+    expect(mod.runner).toBe('onnx')
   })
 
   it('parser extracts overall and layers from stdout', () => {
