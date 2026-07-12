@@ -1,6 +1,9 @@
 export interface ModuleDef {
   name: string
-  shell: string
+  /** Shell command template with {task_dir} and {task_id} placeholders (legacy) */
+  shell?: string
+  /** Runner directory name under runners/ (e.g. 'onnx', 'openvino') */
+  runner?: string
   parser: (stdout: any, params: any) => any
 }
 
