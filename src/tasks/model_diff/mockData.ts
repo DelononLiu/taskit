@@ -59,9 +59,9 @@ export function buildMockTask(id: number, name: string, status: 'completed' | 'f
     comparisons: [
       { framework: { id: 'onnxruntime', name: 'ONNX Runtime', value: 'onnxruntime' },
         overallMetrics: { totalLayers: total, passedLayers: passed, failedLayers: total - passed, avgCosineSimilarity: allPass ? 0.999998 : 0.965, maxAbsError: allPass ? 0.000010 : 0.198, worstLayer: allPass ? null : 'conv_23' } },
-      { framework: { id: 'tensorrt', name: 'TensorRT', value: 'tensorrt' },
-        overallMetrics: { totalLayers: total, passedLayers: passed, failedLayers: total - passed, avgCosineSimilarity: allPass ? 0.999997 : 0.956, maxAbsError: allPass ? 0.000015 : 0.215, worstLayer: allPass ? null : 'conv_23' } },
       { framework: { id: 'openvino', name: 'OpenVINO', value: 'openvino' },
+        overallMetrics: { totalLayers: total, passedLayers: passed, failedLayers: total - passed, avgCosineSimilarity: allPass ? 0.999997 : 0.956, maxAbsError: allPass ? 0.000015 : 0.215, worstLayer: allPass ? null : 'conv_23' } },
+      { framework: { id: 'torch-cpu', name: 'PyTorch (CPU)', value: 'torch-cpu' },
         overallMetrics: { totalLayers: total, passedLayers: passed, failedLayers: total - passed, avgCosineSimilarity: allPass ? 0.999996 : 0.943, maxAbsError: allPass ? 0.000018 : 0.242, worstLayer: allPass ? null : 'conv_23' } },
     ],
   }

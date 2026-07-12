@@ -17,7 +17,7 @@ export const MOCK_ONNXRUNTIME_METRICS: OverallMetrics = {
   worstLayer: 'fc_out',
 }
 
-export const MOCK_TENSORRT_METRICS: OverallMetrics = {
+export const MOCK_TORCH_CPU_METRICS: OverallMetrics = {
   totalLayers: 128,
   passedLayers: 120,
   failedLayers: 8,
@@ -95,7 +95,7 @@ export const MOCK_LAYER_DIFFS = generateMockLayerDiffs()
 export const MOCK_TASK: ComparisonTask = {
   id: 0,
   model: MOCK_MODEL,
-  frameworks: ['onnxruntime', 'tensorrt', 'openvino'],
+  frameworks: ['onnxruntime', 'openvino', 'torch-cpu'],
   status: 'completed',
   progress: 100,
   createdAt: new Date(Date.now() - 60000).toISOString(),
@@ -103,7 +103,7 @@ export const MOCK_TASK: ComparisonTask = {
   baseline: null,
   comparisons: [
     { framework: { id: 'onnxruntime', name: 'ONNX Runtime', value: 'onnxruntime' }, overallMetrics: MOCK_ONNXRUNTIME_METRICS },
-    { framework: { id: 'tensorrt', name: 'TensorRT', value: 'tensorrt' }, overallMetrics: MOCK_TENSORRT_METRICS },
     { framework: { id: 'openvino', name: 'OpenVINO', value: 'openvino' }, overallMetrics: MOCK_OPENVINO_METRICS },
+    { framework: { id: 'torch-cpu', name: 'PyTorch (CPU)', value: 'torch-cpu' }, overallMetrics: MOCK_TORCH_CPU_METRICS },
   ],
 }

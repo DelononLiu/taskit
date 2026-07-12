@@ -236,7 +236,7 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
                     <Select value={baselinePrecision} onValueChange={setBaselinePrecision}>
                       <SelectTrigger className="h-7 text-[11px]"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {['auto', 'fp32', 'fp16', 'int8', 'uint8'].map((p) => (
+                        {['auto', 'fp32', 'fp16', 'int8'].map((p) => (
                           <SelectItem key={p} value={p} className="text-xs">{p.toUpperCase()}</SelectItem>
                         ))}
                       </SelectContent>
@@ -266,7 +266,7 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
                     }}>
                       <SelectTrigger className="h-7 text-[11px]"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {['auto', 'fp32', 'fp16', 'int8', 'uint8'].map((p) => (
+                        {['auto', 'fp32', 'fp16', 'int8'].map((p) => (
                           <SelectItem key={p} value={p} className="text-xs">{p.toUpperCase()}</SelectItem>
                         ))}
                       </SelectContent>
@@ -301,7 +301,7 @@ export function ModelDiffForm({ onTaskCreated }: Props) {
                       }}>
                         <SelectTrigger className="h-7 text-[11px]"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {['auto', 'fp32', 'fp16', 'int8', 'uint8'].map((p) => (
+                          {['auto', 'fp32', 'fp16', 'int8'].map((p) => (
                             <SelectItem key={p} value={p} className="text-xs">{p.toUpperCase()}</SelectItem>
                           ))}
                         </SelectContent>

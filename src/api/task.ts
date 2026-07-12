@@ -57,7 +57,7 @@ export async function getTask(taskId: number): Promise<ComparisonTask> {
     error: resp.error,
     baseline: null,
     comparisons: result.overall ? [
-      { framework: { id: 'tensorrt', name: 'TensorRT', value: 'tensorrt' }, overallMetrics: result.overall },
+      { framework: { id: 'openvino', name: 'OpenVINO', value: 'openvino' }, overallMetrics: result.overall },
     ] : [],
   }
 }
