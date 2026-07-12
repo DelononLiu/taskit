@@ -41,22 +41,45 @@ export async function executeTask(taskId: number): Promise<void> {
     const mod = getModule(task.module)
     if (!mod) throw new Error(`Unknown module: ${task.module}`)
 
+    // Runner 根目录（相对于项目根）
+    const RUNNERS_ROOT = path.resolve('runners')
+
     // 创建临时目录
     taskDir = path.join(TASK_TEMP_DIR, `task_${taskId}`)
     await fs.mkdir(taskDir, { recursive: true })
 
-    // 写入 input.json
-    const inputJson = {
-      modelPath: inputPath,
-      frameworks: params.frameworks ?? [],
-      params: params,
-    }
-    await fs.writeFile(path.join(taskDir, 'input.json'), JSON.stringify(inputJson, null, 2))
+    let cmd: string
+    const outputPath = path.join(taskDir, 'output.json')
 
-    // 构建命令: shell 模板拿到 taskDir，由 runner 读 input.json 写 output.json
-    const cmd = mod.shell
-      .replace('{task_dir}', taskDir)
-      .replace('{task_id}', String(taskId))
+    if (mod.runner) {
+      // ── Runner-based execution: --input --output CLI ──
+      const runnerScript = path.join(RUNNERS_ROOT, mod.runner, 'run.sh')
+
+      const cliArgs: string[] = [
+        `--input`, `'${inputPath}'`,
+        `--output`, `'${outputPath}'`,
+      ]
+
+      // Map camelCase params to --kebab-case CLI args
+      if (params.precision) cliArgs.push('--precision', `'${params.precision}'`)
+      if (params.batchSize) cliArgs.push('--batch-size', `'${params.batchSize}'`)
+
+      cmd = `bash ${runnerScript} ${cliArgs.join(' ')}`
+    } else if (mod.shell) {
+      // ── Legacy shell template execution ──
+      const inputJson = {
+        modelPath: inputPath,
+        frameworks: params.frameworks ?? [],
+        params: params,
+      }
+      await fs.writeFile(path.join(taskDir, 'input.json'), JSON.stringify(inputJson, null, 2))
+
+      cmd = mod.shell
+        .replace('{task_dir}', taskDir)
+        .replace('{task_id}', String(taskId))
+    } else {
+      throw new Error(`Module ${task.module} has neither runner nor shell configured`)
+    }
 
     const child = spawn('bash', ['-c', cmd], {
       timeout: 3600_000,
@@ -88,7 +111,6 @@ export async function executeTask(taskId: number): Promise<void> {
     }
 
     // 读取 output.json
-    const outputPath = path.join(taskDir, 'output.json')
     const outputRaw = await fs.readFile(outputPath, 'utf-8').catch(() => {
       throw new Error('runner did not produce output.json')
     })
