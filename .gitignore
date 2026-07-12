@@ -21,4 +21,5 @@ backend/prisma/*.db
 backend/prisma/*.db-journal
 backend/.env
 
-.superpowers/
+.superpowers/runners/*/venv/
+runners/*/__pycache__/
