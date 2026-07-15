@@ -1,360 +1,515 @@
 # 产品 B: 端到端 AI 辅助模型导入服务
 
-> **轻量调度 + 多 Expert Agent 协作** — 从 GitHub 模型源码到 NPU/GPU 芯片推理部署包的全自动生成。
+> **确定的外壳 + 动态的内核** — 流水线的步骤是固定的，每个节点的功能是 AI Agent 自主的。
 
 ---
 
-## 1. 背景与目标
+## 1. 产品定义
 
-### 1.1 产品定义
-
-产品 B 是一个**多 Agent 协作的端到端模型导入 Web 服务**。用户提供一个 GitHub 仓库地址和模型权重，系统自动完成以下全流程：
+用户提供一个 GitHub 仓库 + 模型权重，系统自动完成以下全流程并交付部署包：
 
 ```
 GitHub 仓库 + 权重
     ↓
-6 个 Expert Agent 协作: 理解模型 → 转换 → 适配芯片 → 生成代码 → 部署推理 → 三面对齐
+6 个阶段: torch_understand → torch2onnx → onnx2chip → gen_cpp → chip_infer → alignment
     ↓
 产出物: C++ demo + CMakeLists + 端侧模型(.wk) + 推理 SO + 部署文档 + 三面对齐报告
 ```
 
-### 1.2 用户画像
-
-- **部署工程师** — 负责将模型部署到端侧芯片，懂芯片工具链、C++，有一定 Python 基础
-- **NPU 算子优化工程师** — 优化芯片推理性能，需要快速拿到芯片模型和基准结果
-- **内部小规模使用** — 非 SaaS 产品，定位为团队内部工具，易部署、易调试
-
-### 1.3 核心设计原则
-
-1. **轻量确定性调度 + 多 Expert Agent** — Orchestrator 只管顺序、回退、闸门、审批。每个步骤是独立 Expert Agent 实例，自主理解上下文、生成代码、执行验证
-2. **半自动审批** — Handoff 分级：不可逆决策（薄 C 确认）才等人；Agent 真搞不定（B 放弃）才升级
-3. **可扩展芯片后端** — 3559a、GPU 是首发，新芯片只需加 capability.yaml + 芯片 Runner
-4. **轻量化** — SQLite 存储，单进程可部署，Huey 做异步任务队列
+**用户画像：** 部署工程师 / NPU 算子优化工程师，懂芯片工具链和 C++，有一定 Python。
+**内部小规模使用，单机可部署。**
 
 ---
 
-## 2. 总体架构
-
-### 2.1 系统分层
+## 2. 核心架构：确定外壳 + 动态内核
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  Frontend (TypeScript · React · Tailwind · shadcn/ui)            │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────┐ │
-│  │Pipeline  │ │Agent     │ │Model Card│ │Gate      │ │Metrics│ │
-│  │Designer  │ │Console   │ │Panel(7槽)│ │Panel     │ │Panel  │ │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └───────┘ │
-│  ┌──────────────┐  ┌──────────────────────────────────────────┐ │
-│  │ Artifact     │  │ AlignmentReport  (三列表格 + 雷达图)      │ │
-│  │ Browser      │  │                                          │ │
-│  └──────────────┘  └──────────────────────────────────────────┘ │
-└─────────────────────────┬────────────────────────────────────────┘
-                          │ HTTP REST (前端轮询)
-┌─────────────────────────▼────────────────────────────────────────┐
-│  FastAPI + Huey Worker                                           │
-│                                                                  │
-│  ┌───────────────────────────────────────────────────────┐      │
-│  │  API: POST /pipelines  ·  GET /pipelines/:id           │      │
-│  │       POST /pipelines/:id/approve  ·  GET /artifacts   │      │
-│  └───────────────────────────────────────────────────────┘      │
-│                                                                  │
-│  ┌───────────────────────────────────────────────────────┐      │
-│  │  Huey Task Queue (SQLite backend)                      │      │
-│  │  run_pipeline(id) — 审批时重新入队                      │      │
-│  └───────────────────────────────────────────────────────┘      │
-│                                                                  │
-│  ┌───────────────────────────────────────────────────────┐      │
-│  │  Orchestrator (确定性调度器)                            │      │
-│  │  · 顺序调度 · 回退管理 · 闸门执行 · 审批触发            │      │
-│  └───────────────────────────────────────────────────────┘      │
-│                                                                  │
-│  ┌───────────────────────────────────────────────────────┐      │
-│  │  Expert Agent Nodes                                     │      │
-│  │  ①torch_understand → ②torch2onnx → ③onnx2chip         │      │
-│  │  → ④gen_cpp → ⑤chip_infer → ⑥alignment                │      │
-│  │  + rollback_handler                                     │      │
-│  └───────────────────────────────────────────────────────┘      │
-│                                                                  │
-│  ┌───────────────────────────────────────────────────────┐      │
-│  │  Tool Layer: LLM Client · Sandbox · Chip SDK Wrapper   │      │
-│  └───────────────────────────────────────────────────────┘      │
-│                                                                  │
-│  ┌───────────────────────────────────────────────────────┐      │
-│  │  Storage: SQLite + 文件系统                             │      │
-│  │  pipeline/{id}/artifacts/  workspace/  checkpoints/    │      │
-│  └───────────────────────────────────────────────────────┘      │
+│  确定的外壳 (DeployAgent)                                        │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │  for stage in stages:                                      │  │
+│  │    result = stage.expert.run(card)                         │  │
+│  │    gate = stage.verify_fn(result)                          │  │
+│  │    if not gate.passed: handle(gate, result)                │  │
+│  │    if stage.need_approval: save_card(); return              │  │
+│  │    save_card()                                             │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│  职责: 顺序调度 / 回退 / 闸门 / 审批触发 / 持久化                │
+│  不做: 不调用 LLM / 不写代码 / 不执行脚本                         │
+├──────────────────────────────────────────────────────────────────┤
+│  动态的内核 (Expert Agent)                                       │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │  class ONNXExportExpert(FunctionAgent):                    │  │
+│  │    def run(card) -> AgentResult:                           │  │
+│  │      # 自主决策、LLM 写代码、执行、修正                     │  │
+│  │      # 可选内部用 LangGraph                                │  │
+│  │      return AgentResult(card, trials, gate, handoff)       │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│  职责: 自主完成任务 / 理解上下文 / 生成代码 / 自我修正            │
+│  方式: 怎么做不预写，Agent 自己决定                               │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 技术栈
+### 核心原则
+
+**流水线是确定的，节点功能是 AI Agent 动态的：**
+- 步骤顺序固定（不靠 AI 决定下一步做什么）
+- 回退规则固定（不靠 AI 判断该不该回退）
+- 闸门标准固定（验收条件预注册）
+- Agent 内部怎么做不确定——生成什么代码、怎么修错、试几次，Agent 自己决定
+
+---
+
+## 3. 总体架构
+
+### 3.1 系统分层
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  Frontend (React + Tailwind + shadcn/ui)                         │
+│  PipelineHub / PipelineView / Agent Console /                    │
+│  ModelCardPanel / GatePanel / ArtifactBrowser / AlignmentReport  │
+└─────────────────────────┬────────────────────────────────────────┘
+                          │ HTTP REST (前端轮询)
+┌─────────────────────────▼────────────────────────────────────────┐
+│  FastAPI + Huey Worker (同进程组, multiprocessing 拉起)           │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────┐       │
+│  │  API                                                    │       │
+│  │  POST  /api/pipelines           创建流水线, Huey 入队  │       │
+│  │  GET   /api/pipelines/:id       查询状态 + 消息 + 卡   │       │
+│  │  POST  /api/pipelines/:id/approve  审批, Huey 重新入队 │       │
+│  │  GET   /api/artifacts/*path     下载产出物             │       │
+│  └──────────────────────────────────────────────────────┘       │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────┐       │
+│  │  DeployAgent (确定性调度器)                             │       │
+│  │  for 循环 + StageDef + DeployCard                      │       │
+│  │  + gates.py + rollback.py + save_card()               │       │
+│  └──────────────────────────────────────────────────────┘       │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────┐       │
+│  │  Expert Agents (FunctionAgent 基类)                    │       │
+│  │  ① torch_understand  →  ② torch2onnx                  │       │
+│  │  ③ onnx2chip(Runner) →  ④ gen_cpp                   │       │
+│  │  ⑤ chip_infer(Runner)→  ⑥ alignment(Runner)          │       │
+│  │  + rollback_handler                                   │       │
+│  └──────────────────────────────────────────────────────┘       │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────┐       │
+│  │  Tool Layer                                             │       │
+│  │  LLM Client / Sandbox Executor / Chip SDK Wrapper       │       │
+│  │  runners/{chip}/convert.sh, infer.sh, build.sh          │       │
+│  └──────────────────────────────────────────────────────┘       │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────┐       │
+│  │  Storage                                                │       │
+│  │  SQLite + 文件系统                                      │       │
+│  │  pipeline/{id}/artifacts/  workspace/  checkpoints/     │       │
+│  └──────────────────────────────────────────────────────┘       │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 3.2 技术栈
 
 | 层 | 技术 |
 |---|------|
-| 前端框架 | React 18 + TypeScript |
-| 前端 UI | Tailwind CSS + shadcn/ui |
-| 图表 | Recharts |
-| 后端框架 | Python FastAPI + uvicorn |
+| 前端 | React 18 + TypeScript + Tailwind CSS + shadcn/ui + Recharts |
+| 后端 | Python FastAPI + uvicorn |
 | 异步队列 | Huey (SQLite backend) |
-| 调度编排 | LangGraph (StateGraph + Checkpointer + Interrupt) |
-| 数据库 | SQLite (aiosqlite) |
+| 数据库 | SQLite + 文件系统 |
 | LLM | Claude API / GPT API |
-| 沙箱执行 | subprocess（可升级 Docker）|
-| 前后端通信 | REST（前端每 3 秒轮询）|
+| 沙箱执行 | subprocess (可升级 Docker) |
+| 通信 | REST (前端每 3s 轮询) |
+| Agent 编排 | 外层纯 Python; Expert 内部可选用 LangGraph |
 
 ---
 
-## 3. 核心设计：轻量 Orchestrator + Expert Agent
+## 4. 核心数据结构
 
-### 3.1 职责划分
-
-```
-Orchestrator (确定性调度器，不含 AI)
-  ✅ 按顺序推进步骤
-  ✅ 执行双闸门（产出物 + 验证）
-  ✅ 处理回退（下游 → 上游，保留槽数据）
-  ✅ 触发审批中断（仅不可逆决策点）
-  ✅ 管理 State 持久化
-  ✗ 不调用 LLM，不生成代码，不执行脚本
-
-Expert Agent Node (独立 Agent 实例)
-  ✅ 理解当前上下文（读 7 槽 + 已有产出物）
-  ✅ 自主决策如何完成本步骤
-  ✅ 生成执行代码（代码本身即为产出物）
-  ✅ 执行 → 观察 → 修正 → 重试
-  ✅ 写入槽数据
-```
-
-### 3.2 为什么 Orchestrator 不是 Agent
-
-- 流水线顺序是固定的，不需要 AI 决策
-- 回退规则是确定的
-- Agent 只存在于需要智能的地方（Expert Node 内部）
-
----
-
-## 4. 模型理解卡（7 槽）
-
-| 槽 | 名称 | 写入阶段 | 内容 |
-|---|------|---------|------|
-| 1 | 模型身份与来源 | ① torch_understand | repo, commit, weights, target_device |
-| 2 | 架构与数据流理解 | ① torch_understand | forward_path, unconvertible_ops |
-| 3 | I/O 契约 | ① torch_understand | input_shape, output_shape, dtype, batch_dim |
-| 4 | 改造决策日志 | ②③ 累积 | original_op, replacement, cost, rationale |
-| 5 | 已遇坑清单 | ②③ 累积 | phenomenon, root_cause, solution, knowledge_ref |
-| 6 | 逐阶段验证状态 | ②⑤⑥ 写入 | A(torch-onnx), B(onnx-chip), C(chip-torch) |
-| 7 | 设备与转换路径 | ③ onnx2chip | toolchain, converter_args, target_spec |
-
-**槽7 约束前置：** 设备能力档案在②开始前就注入，不等③才发现不兼容。
-
-**槽5 累积传递：** 每个步骤追加新坑，下游读取所有已记录坑防止重踩。
-
-**回退时槽不丢：** 全部槽保留，受影响步骤的 artifact 标记为 stale。
-
----
-
-## 5. LangGraph 调度设计
-
-### 5.1 Graph 定义
+### 4.1 DeployCard (Pydantic)
 
 ```python
-builder = StateGraph(PipelineState)
+class DeployCard(BaseModel):
+    id: str
+    github_url: str
+    weight_url: Optional[str] = None
+    target_platform: str = "3559a"
+    status: str = "running"
+    current_stage: int = 0
 
-# 7 个节点
-builder.add_node("torch_understand",  torch_understand_node)
-builder.add_node("torch2onnx",        torch2onnx_node)
-builder.add_node("onnx2chip",         onnx2chip_node)
-builder.add_node("gen_cpp",           gen_cpp_node)
-builder.add_node("chip_infer",        chip_infer_node)
-builder.add_node("alignment",         alignment_node)
-builder.add_node("rollback_handler",  rollback_handler_node)
+    # 核心数据 — 自由扩展，各阶段按需写入
+    # 约定的槽 key: slot_1_identity, slot_2_architecture, slot_3_io_contract
+    #               slot_4_modifications, slot_5_pitfalls, slot_6_verification
+    #               slot_7_device_path
+    # 但不在 Schema 层固定，想加槽 8、9 直接写，不改代码
+    data: dict = {}
 
-# 正向边
-builder.add_edge(START, "torch_understand")
-builder.add_edge("torch_understand", "torch2onnx")
-builder.add_edge("torch2onnx", "onnx2chip")
-builder.add_edge("onnx2chip", "gen_cpp")
-builder.add_edge("gen_cpp", "chip_infer")
-builder.add_edge("chip_infer", "alignment")
-builder.add_edge("alignment", END)
+    # 阶段状态
+    stages: list[StageState] = []
 
-# 回退边: 任意节点 → rollback_handler
-for node in ["torch2onnx", "onnx2chip", "gen_cpp", "chip_infer", "alignment"]:
-    builder.add_edge(node, "rollback_handler")
+    # 回退
+    rollback: Optional[RollbackInfo] = None
+    rollback_count: int = 0
 
-# rollback_handler 按回退目标路由
-def route_after_rollback(state): return state["rollback_context"]["to_step"]
-builder.add_conditional_edges("rollback_handler", route_after_rollback, {...})
+    # 对账链: {A: {...}, B: {...}, C: {...}}
+    reconciliation_chain: dict = {}
 
-graph = builder.compile(
-    checkpointer=SqliteSaver.from_conn_string("pipeline_state.db"),
-    interrupt_before=[
-        "torch2onnx",    # 不可逆: 基准输出确定
-        "gen_cpp",       # 不可逆: 芯片模型 + C++ 代码
-        "alignment",     # 最终审查
-    ]
-)
+    # 日志
+    log: list[LogEntry] = []
 ```
 
-### 5.2 审批恢复
+### 4.2 辅助类型
 
 ```python
+class StageState(BaseModel):
+    name: str
+    status: Literal["pending", "running", "waiting_approval",
+                     "approved", "completed", "failed"]
+    attempts: int = 0
+    gate_output: Optional[GateResult] = None
+    gate_verification: Optional[GateResult] = None
+    handoff_level: Optional[str] = None  # "thin_c" | "b_escalation"
+    error: Optional[str] = None
+
+class GateResult(BaseModel):
+    passed: bool
+    message: str
+    metrics: dict = {}
+
+class AgentResult(BaseModel):
+    card: DeployCard
+    trials: list[Trial] = []
+    gate_output: Optional[GateResult] = None
+    gate_verification: Optional[GateResult] = None
+    handoff: Optional[HandoffLevel] = None
+
+class RollbackInfo(BaseModel):
+    from_stage: int
+    to_stage: int
+    reason: str
+    context: dict = {}
+```
+
+### 4.3 StageDef
+
+```python
+class StageDef(BaseModel):
+    name: str
+    expert_class: type[FunctionAgent]
+    need_approval: bool = False       # 是否在完成后等待审批
+    input_slots: list[str] = []       # 需要的槽 key
+    output_slots: list[str] = []      # 写入的槽 key
+    verify_fn: Callable               # 验收函数 (AgentResult) -> GateResult
+```
+
+---
+
+## 5. DeployAgent 调度器
+
+### 5.1 主循环
+
+```python
+def run_pipeline(pipeline_id: str):
+    card = load_card(pipeline_id)
+
+    for i in range(card.current_stage, len(stages)):
+        stage = stages[i]
+        card.current_stage = i
+
+        # 跳过已完成的阶段
+        if card.stages[i].status in ("completed", "approved"):
+            continue
+
+        card.stages[i].status = "running"
+        save_card(card)
+
+        # 执行 Expert Agent
+        result = stage.expert_class.run(card)
+
+        # 检查回退
+        if result.card.rollback:
+            handle_rollback(result.card)
+            save_card(result.card)
+            return  # 下次从回退目标阶段重新开始
+
+        # 检查闸门
+        gate = stage.verify_fn(result)
+        if not gate.passed:
+            if result.card.rollback_count < card.max_rollbacks:
+                # 自动回退
+                card.rollback_count += 1
+                card.rollback = RollbackInfo(...)
+                save_card(card)
+                return
+            else:
+                # B 放弃升级
+                card.status = "failed"
+                card.stages[i].status = "failed"
+                card.stages[i].handoff_level = "b_escalation"
+                save_card(card)
+                return
+
+        # 更新阶段状态
+        card.stages[i].status = "completed"
+        card.data.update(result.card.data)
+        save_card(card)
+
+        # 需要审批?
+        if stage.need_approval:
+            card.stages[i].status = "waiting_approval"
+            save_card(card)
+            return  # Huey task 结束, 等待重新入队
+
+    card.status = "completed"
+    save_card(card)
+```
+
+### 5.2 恢复机制
+
+```python
+# 审批后重新入队
 @app.post("/api/pipelines/{id}/approve")
 async def approve(id: str):
-    db.execute("UPDATE pipeline_steps SET status='approved' ...")
-    run_pipeline(id)  # Huey 重新入队, LangGraph 从 Checkpoint 恢复
+    card = load_card(id)
+    card.stages[card.current_stage].status = "approved"
+    save_card(card)
+    run_pipeline(id)         # Huey 重新入队
     return {"ok": True}
+
+# 恢复时: 入口统一从 card.current_stage 开始
+# 已 completed/approved 的阶段在循环开头自动跳过
+# 不区分首次运行还是恢复运行
 ```
 
-### 5.3 Handoff 分级
+### 5.3 回退机制
 
-| 类型 | 触发 | 行为 |
-|------|------|------|
-| 薄 C 确认 | `interrupt_before` 3 个决策点 | 中断等审批 |
-| B 放弃 | 所有尝试失败 OR 回退超限 | 标记 failed + 结构化现场包 |
+```python
+def handle_rollback(card: DeployCard):
+    target = card.rollback.to_stage
+
+    # 标记受影响阶段的 artifact 为 stale
+    for j in range(target + 1, card.current_stage + 1):
+        card.stages[j].status = "pending"
+        mark_artifacts_stale(card.id, stages[j].name)
+
+    # 重置 current_stage
+    card.current_stage = target
+
+# 回退超限 → B handoff: card.status = "failed" + 结构化现场包
+# 现场包内容: 当前 card / 回退历史 / Agent 最后一次尝试的 context
+```
 
 ---
 
-## 6. 设备能力档案 + 约束前置
+## 6. Expert Agent
 
-```yaml
-# runners/3559a/capability.yaml
-platform: 3559a
-toolchain: dnnc
-supported_ops: [Conv, Relu, Gemm, Softmax, BatchNorm, ...]
-unsupported_ops:
-  - op: NonZero
-    replacement: TopK
-    cost: "performance ×2"
-  - op: dict_mutation
-    replacement: null
-    requires: "handoff_B"
-opset_range: [11, 17]
-precision: [fp32, int8]
+### 6.1 接口
+
+```python
+class FunctionAgent(ABC):
+    @staticmethod
+    @abstractmethod
+    def run(card: DeployCard) -> AgentResult:
+        """Expert Agent 入口。
+        内部自主决策：读上下文、LLM 写代码、sandbox 执行、自我修正。
+        内部可选用 LangGraph（建议 Code Agent 风格的 Graph）。
+        返回结构化结果：更新后的 card + 闸门结果 + handoff 信号。
+        """
+        pass
 ```
 
-新芯片接入: `capability.yaml` + `runners/{chip}/convert.sh` + `infer.sh` + `build.sh`
+### 6.2 各阶段定义
+
+| 阶段 | 类型 | 需要审批 | 输入槽 | 输出槽 | 闸门标准 |
+|------|------|---------|--------|--------|---------|
+| ① torch_understand | Agent | 否 (薄 C) | github_url | slot_1,2,3 | torch_infer.py 执行成功 + output shape 匹配 |
+| ② torch2onnx | Agent | 是 | slot_2,3,7 | slot_4,5,6A | cosine >= 0.99 |
+| ③ onnx2chip | Runner | 否 | slot_4,5 | slot_4(追加),5(追加),7 | 芯片模型文件存在 |
+| ④ gen_cpp | Agent | 是 | slot_3,4,7 | — | 编译通过 |
+| ⑤ chip_infer | Runner | 否 | slot_3 | slot_6B | 芯片输出数值非零 |
+| ⑥ alignment | Runner | 是 | slot_6A,6B | slot_6C | 三段对账链全部过阈值 |
+
+### 6.3 Expert 内部使用 LangGraph 的原则
+
+- LangGraph **不控制整条流水线**，只在 Expert 节点内部用于管理 Agent 的尝试循环
+- Expert 内部使用 LangGraph，或纯手写 while 循环，由 Expert 实现者自行决定
+- 外层 DeployAgent 不关心 Expert 内部的实现细节
 
 ---
 
-## 7. 前端 UI
+## 7. Handoff 分级
+
+| 类型 | 触发条件 | 行为 |
+|------|---------|------|
+| **薄 C 确认** | `stage.need_approval == True` | `status = "waiting_approval"`, 等用户审批 |
+| **B 放弃升级** | Agent 所有尝试失败 OR `rollback_count >= max_rollbacks` | `status = "failed"` + 结构化现场包 |
+
+---
+
+## 8. 前端 UI
 
 ```
 /                    → Pipeline Hub（新建 + 历史列表）
-/pipelines/:id       → 执行视图
-                       ┌──────────┬─────────────────────┐
-                       │ Progress │ Agent Console        │
-                       │ ① ☑ ② ◉ │ (对话流 + 闸门结果)  │
-                       │ ③ ○ ④ ○ │                      │
-                       │ ⑤ ○ ⑥ ○ │                      │
-                       ├──────────┴─────────────────────┤
-                       │ Model Card Panel (7槽实时)      │
-                       │ Gate Panel (双闸门 ✓/✗)        │
-                       │ Artifact Browser               │
-                       └────────────────────────────────┘
-/pipelines/:id/report → 三面对齐报告（表格 + 雷达图 + 对账链A/B/C）
-/history              → 历史列表
+/pipelines/:id       → 执行视图（Progress + Console + Card + Gates + Artifacts）
+/pipelines/:id/report → 最终对齐报告
+/history             → 历史列表
+```
+
+布局：
+
+```
+┌──────────────┬────────────────────────────────────┐
+│ Pipeline     │ Agent Console / Approval UI        │
+│ Progress     │ (对话流 + 闸门结果)                 │
+│ ① ☑ ② ◉     │                                     │
+│ ③ ○ ④ ○     │                                     │
+│ ⑤ ○ ⑥ ○     │                                     │
+├──────────────┴────────────────────────────────────┤
+│ Model Card Panel                                  │
+│ slot_1: LoFTR / d2294fb    slot_2: coarse→fine    │
+│ slot_3: [1,3,480,640]      slot_4: NonZero→TopK   │
+│ slot_5: dict mutation..    slot_6: A✓ B✗          │
+│ slot_7: dnnc / WK                                  │
+├───────────────────────────────────────────────────┤
+│ Gate Panel (双闸门 ✓/✗ + 指标)                     │
+│ Artifact Browser (ready / stale 标记)             │
+└───────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 8. 数据模型
+## 9. 数据模型
 
 ```sql
 CREATE TABLE pipelines (
     id TEXT PRIMARY KEY,
-    github_url TEXT NOT NULL, weight_url TEXT,
+    github_url TEXT NOT NULL,
     target_platform TEXT NOT NULL DEFAULT '3559a',
     status TEXT NOT NULL DEFAULT 'running',
-    current_step INTEGER NOT NULL DEFAULT 0,
+    current_stage INTEGER NOT NULL DEFAULT 0,
     rollback_count INTEGER NOT NULL DEFAULT 0,
+    card_json TEXT,                -- DeployCard 完整序列化
     created_at, updated_at
 );
 
-CREATE TABLE pipeline_steps (
+CREATE TABLE pipeline_stages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    pipeline_id TEXT NOT NULL REFERENCES pipelines(id),
-    step_index INTEGER NOT NULL, name TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending',
-    attempts, max_attempts,
-    gate_output BOOLEAN, gate_verification BOOLEAN,
-    error TEXT, handoff_level TEXT, -- NULL | 'thin_c' | 'b_escalation'
-    started_at, completed_at
+    pipeline_id TEXT REFERENCES pipelines(id),
+    stage_index INTEGER, name TEXT, status TEXT,
+    gate_output_json TEXT,
+    gate_verification_json TEXT,
+    handoff_level TEXT,
+    attempts INTEGER DEFAULT 0,
+    error TEXT
 );
 
 CREATE TABLE artifacts (
-    id, pipeline_id, step_name, name, path, type, size,
-    status TEXT NOT NULL DEFAULT 'ready', -- 'ready' | 'stale'(回退后)
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pipeline_id TEXT REFERENCES pipelines(id),
+    stage_name TEXT, name TEXT, path TEXT, type TEXT, size INTEGER,
+    status TEXT DEFAULT 'ready',  -- 'ready' | 'stale'
     created_at
 );
 
-CREATE TABLE agent_messages (id, pipeline_id, step_name, role, content, timestamp);
-CREATE TABLE rollback_logs (id, pipeline_id, from_step, to_step, reason, context_json, created_at);
+CREATE TABLE agent_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pipeline_id TEXT REFERENCES pipelines(id),
+    stage_name TEXT, role TEXT, content TEXT, timestamp
+);
+
+CREATE TABLE rollback_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pipeline_id TEXT REFERENCES pipelines(id),
+    from_stage INTEGER, to_stage INTEGER, reason TEXT,
+    context_json TEXT, created_at
+);
 ```
 
 ---
 
-## 9. 目录结构
+## 10. 目录结构
 
 ```
 product-b/
 ├── backend/
-│   ├── app.py                    # FastAPI 入口
-│   ├── api/pipelines.py, artifacts.py
-│   ├── orchestrator/
-│   │   ├── graph.py              # LangGraph 定义
-│   │   ├── state.py              # PipelineState
-│   │   ├── gates.py              # 双闸门
-│   │   └── rollback.py           # 回退处理
-│   ├── experts/                  # Expert Agent 节点
-│   │   ├── base.py               # Agent 基类
-│   │   ├── torch_understand.py, torch2onnx.py
-│   │   ├── onnx2chip.py, gen_cpp.py
-│   │   ├── chip_infer.py, alignment.py
+│   ├── app.py                      # FastAPI 入口
+│   ├── api/
+│   │   ├── pipelines.py            # POST/GET pipelines, approve
+│   │   └── artifacts.py            # 产出物下载
+│   ├── core/
+│   │   ├── deploy_agent.py         # DeployAgent 主循环
+│   │   ├── card.py                 # DeployCard + StageState
+│   │   ├── stage.py                # StageDef
+│   │   ├── gates.py                # 双闸门逻辑
+│   │   └── rollback.py             # 回退处理
+│   ├── experts/
+│   │   ├── base.py                 # FunctionAgent 基类
+│   │   ├── torch_understand.py     # ①
+│   │   ├── torch2onnx.py           # ②
+│   │   ├── onnx2chip.py            # ③ Runner 封装
+│   │   ├── gen_cpp.py              # ④
+│   │   ├── chip_infer.py           # ⑤ Runner 封装
+│   │   └── alignment.py            # ⑥ Runner 封装
 │   ├── tools/
-│   │   ├── llm_client.py, sandbox.py, chip_sdk.py
-│   ├── cards/model_card.py       # 7 槽读写
-│   ├── workers/tasks.py          # Huey task: run_pipeline()
-│   ├── models/db.py
-│   ├── runners/{3559a,gpu}/      # capability.yaml + convert/infer/build.sh
+│   │   ├── llm_client.py           # Claude/GPT API
+│   │   ├── sandbox.py              # subprocess 沙箱
+│   │   └── chip_sdk.py             # 芯片工具链封装
+│   ├── runners/
+│   │   ├── 3559a/capability.yaml, convert.sh, infer.sh, build.sh
+│   │   ├── gpu/
 │   │   └── alignment/compare.py
-│   ├── requirements.txt
+│   ├── workers/
+│   │   └── tasks.py                # Huey: run_pipeline()
+│   ├── models/
+│   │   └── db.py                   # SQLite 操作
+│   └── requirements.txt
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/PipelineHub, PipelineView, History
+│   │   ├── pages/
 │   │   ├── components/
-│   │   │   PipelineDesigner, PipelineProgress, AgentConsole,
-│   │   │   ModelCardPanel, GatePanel, MetricsPanel,
-│   │   │   ArtifactBrowser, AlignmentReport, ApprovalDialog
 │   │   ├── api/pipelines.ts
 │   │   └── types/pipeline.ts
-│   ├── package.json, vite.config.ts
+│   └── package.json
 └── README.md
 ```
 
 ---
 
-## 10. 阶段规划
+## 11. 阶段规划
 
 ### Phase 1: Core Pipeline
-FastAPI + SQLite + Huey 框架 · LangGraph + State + Checkpoint · ①② Expert Agent · 7 槽 + 双闸门 + 前端基础 — **产出: torch → ONNX 全流程**
+
+FastAPI + SQLite + Huey · DeployAgent + DeployCard + StageDef · ①② Expert Agent · 审批/回退/闸门 · 前端基础
+
+→ 产出: 输入 GitHub → torch → ONNX 全流程可跑
 
 ### Phase 2: Chip Integration
-③④⑤芯片 Runner · 回退机制 + Handoff · ArtifactBrowser · 芯片设备档案 — **产出: 3559a 全流程跑通**
+
+③ onnx2chip Runner · ④ gen_cpp Agent · ⑤ chip_infer Runner · 设备能力档案 · 回退+handoff 完善 · ArtifactBrowser
+
+→ 产出: 3559a 全流程跑通
 
 ### Phase 3: Polish
-⑥三面对齐 + 报告 · MetricsPanel · 知识闭环 v0 · Docker 容器化 — **产出: 完整产品 B**
+
+⑥ alignment + 三面对齐报告 · 对账链 A/B/C 面板 · 知识闭环 v0 · Docker 容器化 · 部署文档
+
+→ 产出: 完整产品 B 内部可用
 
 ---
 
-## 11. 方案要点速查
+## 12. Grilling 确认清单
 
-1. **轻量 Orchestrator + Expert Agent** — 调度确定，智能在 Agent 内部
-2. **LangGraph + Huey** — 管状态/审批/Checkpoint + 管异步队列
-3. **7 槽模型理解卡** — 显式知识外化，人机共享
-4. **回退机制** — 带原因回退上游，保留槽，有上限
-5. **双闸门 + 对账链 A/B/C** — 产出闸门 + 验证闸门，三段独立判据
-6. **Handoff 分级** — 薄 C (3 个决策点) + B 升级
-7. **设备能力档案 + 约束前置** — YAML 档案在 torch2onnx 注入
-8. **观测三层** — 卡槽面板 + 闸门面板 + 指标面板
-9. **前端轮询** — 删除 SSE
-10. **产出物** — C++ demo + CMakeLists + .wk + SO + 文档 + 对齐报告
+| 问题 | 决策 |
+|------|------|
+| 审批时 Huey 怎么处理 | task return + 重新入队 |
+| 恢复时从哪开始 | 始终从 current_stage，不区分首次/恢复 |
+| 回退配合 | current_stage 直接设回目标阶段 |
+| 持久化语义 | save_card() 成功即完成 |
+| Expert 用 LangGraph | 外层纯 Python，内部可选 LangGraph |
+| Expert checkpoint vs 外层 | 分离，外层只关心 gate.passed |
+| Agent.run() 同步/异步 | 同步，Huey 多线程 |
+| 审批看到什么 | 产出物 + 关键信息摘要 |
+| 审批后 current_stage | 不自增，靠 status=='approved' 跳过 |
+| 回退后 artifact | 标记 stale |
+| 回退超限 | failed + 结构化现场包 |
