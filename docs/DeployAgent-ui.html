@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Deployment Foundry - 模型部署工坊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            accent: '#0284c7', /* 换成明亮的 sky-600 作为主色调 */
+                            accentHover: '#0369a1',
+                            lightBg: '#f0f9ff', /* 浅蓝底色 */
+                            success: '#10b981'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f4f9fd; color: #0f172a; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #bae6fd; border-radius: 99px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased overflow-hidden select-none">
+
+    <header class="h-[76px] border-b border-sky-100 bg-white flex items-center justify-between px-8 shrink-0 relative z-50 shadow-[0_4px_20px_rgba(2,132,199,0.03)]">
+        <div class="flex items-center space-x-6">
+            <div class="flex items-center space-x-3">
+                <div class="bg-sky-50 text-brand-accent w-10 h-10 rounded-xl flex items-center justify-center border border-sky-200 shadow-sm">
+                    <i class="fa-solid fa-cubes-stacked text-base"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-extrabold text-sm tracking-tight text-slate-800">DEPLOY <span class="text-brand-accent font-black">FOUNDRY</span></span>
+                        <span class="bg-sky-500 text-white text-[9px] px-1.5 py-0.5 rounded font-mono font-bold tracking-wider">v3.0</span>
+                    </div>
+                    <div class="text-[10px] text-sky-500 font-bold tracking-widest uppercase mt-0.5">模型部署工坊</div>
+                </div>
+            </div>
+            
+            <div class="hidden md:block h-6 w-px bg-slate-200"></div>
+            
+            <div class="hidden md:flex items-center space-x-4 text-xs">
+                <div class="flex items-center space-x-2 bg-sky-50/60 border border-sky-100 px-2.5 py-1 rounded-lg">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-slate-500 font-medium">LLM Compiler:</span>
+                    <span class="font-mono font-bold text-sky-700">IDLE</span>
+                </div>
+                <div class="flex items-center space-x-2 bg-sky-50/60 border border-sky-100 px-2.5 py-1 rounded-lg">
+                    <i class="fa-solid fa-microchip text-sky-400 text-[11px]"></i>
+                    <span class="text-slate-500 font-medium">物理编译集群:</span>
+                    <span class="font-mono font-bold text-sky-700">4/8 Node Active</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <button class="bg-brand-accent hover:bg-brand-accentHover text-white text-xs font-bold px-5 py-3 rounded-xl transition shadow-sm flex items-center space-x-2 border border-sky-500/10">
+                <i class="fa-solid fa-plus text-[11px]"></i>
+                <span>投料新部署任务</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden relative">
+        
+        <aside class="w-60 border-r border-sky-100 bg-white flex flex-col shrink-0 p-4 justify-between">
+            <div class="space-y-1.5">
+                <div class="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-3 px-2">生产车间</div>
+                
+                <a href="#" class="flex items-center justify-between px-3 py-3 rounded-xl bg-sky-50 text-brand-accent font-bold text-xs transition border border-sky-100/70">
+                    <span class="flex items-center">
+                        <i class="fa-solid fa-box-open mr-3 text-sm text-brand-accent"></i>
+                        <span>模型部署大盘</span>
+                    </span>
+                    <span class="bg-sky-200/60 text-sky-700 px-1.5 py-0.2 rounded text-[10px] font-mono">3</span>
+                </a>
+
+                <a href="#" class="flex items-center justify-between px-3 py-3 rounded-xl text-slate-600 hover:bg-sky-50/50 hover:text-brand-accent font-semibold text-xs transition group">
+                    <span class="flex items-center">
+                        <i class="fa-solid fa-scale-balanced mr-3 text-sm text-slate-400 group-hover:text-brand-accent"></i>
+                        <span>模型精度标定</span>
+                    </span>
+                    <span class="bg-slate-100 text-slate-500 px-1.5 py-0.2 rounded text-[10px] font-mono">PK</span>
+                </a>
+
+                <a href="#" class="flex items-center justify-between px-3 py-3 rounded-xl text-slate-600 hover:bg-sky-50/50 hover:text-brand-accent font-semibold text-xs transition group">
+                    <span class="flex items-center">
+                        <i class="fa-solid fa-vials mr-3 text-sm text-slate-400 group-hover:text-brand-accent"></i>
+                        <span>真机硬件沙箱</span>
+                    </span>
+                </a>
+
+                <div class="h-px bg-slate-100 my-4"></div>
+
+                <div class="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-3 px-2">资产管理</div>
+                
+                <a href="#" class="flex items-center px-3 py-3 rounded-xl text-slate-600 hover:bg-sky-50/50 hover:text-brand-accent font-semibold text-xs transition group">
+                    <i class="fa-solid fa-folder-closed mr-3 text-sm text-slate-400 group-hover:text-brand-accent"></i>
+                    <span>已出厂部署包</span>
+                </a>
+            </div>
+
+            <div class="p-2 bg-sky-50/50 border border-sky-100 rounded-xl">
+                <div class="text-[9px] text-sky-400 font-bold uppercase tracking-wider font-mono">Hardware Node IP</div>
+                <div class="text-[11px] text-sky-700 font-mono font-bold mt-0.5">10.128.4.15</div>
+            </div>
+        </aside>
+
+        <main class="flex-1 p-8 overflow-y-auto flex flex-col space-y-6">
+            
+            <div class="flex justify-between items-end px-1">
+                <div>
+                    <h2 class="text-xl font-extrabold text-slate-800 tracking-tight">模型部署大盘</h2>
+                    <p class="text-xs text-slate-400 mt-1">LLM 驱动的模型端侧全自动转化、SDK 库与可执行 Demo 构建流水线</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-3.5 rounded-xl border border-sky-100 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-center space-x-3 text-xs">
+                    <div class="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg">
+                        <span class="text-slate-400 font-medium">芯片平台:</span>
+                        <select class="bg-transparent font-bold text-slate-700 focus:outline-none cursor-pointer">
+                            <option>全部芯片 (All)</option>
+                            <option>Hi-3559A</option>
+                            <option>RK3588</option>
+                            <option>Jetson Orin</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg">
+                        <span class="text-slate-400 font-medium">装配状态:</span>
+                        <select class="bg-transparent font-bold text-slate-700 focus:outline-none cursor-pointer">
+                            <option>全部状态 (All)</option>
+                            <option>已就绪 (READY)</option>
+                            <option>质检确认中 (PENDING)</option>
+                            <option>自动装配中 (COMPILING)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="relative w-full md:w-72">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-[11px]"></i>
+                    <input type="text" placeholder="输入任务名称搜索..." class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 pl-8 py-2 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-slate-800 transition font-medium" />
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-sky-100 shadow-xs overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-sky-50/40 border-b border-sky-100 text-[10px] font-bold tracking-wider text-slate-400 uppercase font-mono">
+                                <th class="p-4 pl-6 w-[28%]">部署任务 / 目标硬件</th>
+                                <th class="p-4 w-[18%]">质检核心指标 (外显)</th>
+                                <th class="p-4 w-[16%]">流水线装配状态</th>
+                                <th class="p-4 w-[16%]">完成时间</th>
+                                <th class="p-4 pr-6 text-right w-[22%]">终极出厂动作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-xs">
+                            
+                            <tr class="hover:bg-sky-50/20 transition group">
+                                <td class="p-4 pl-6">
+                                    <div class="font-bold text-slate-800 font-mono text-sm">loftr_coarse_fine</div>
+                                    <div class="flex items-center space-x-2 mt-1">
+                                        <span class="bg-sky-50 text-brand-accent font-mono text-[10px] font-bold px-1.5 py-0.2 rounded border border-sky-100">Hi-3559A</span>
+                                        <span class="text-slate-400 text-[10px]">INT8 量化</span>
+                                    </div>
+                                </td>
+                                <td class="p-4 font-mono">
+                                    <div class="text-slate-700 font-semibold">精度保持: <span class="text-emerald-600">99.41%</span></div>
+                                    <div class="text-slate-400 text-[11px] mt-0.5">端侧延时: <b class="text-slate-600 font-medium">14.2ms</b></div>
+                                </td>
+                                <td class="p-4">
+                                    <span class="inline-flex items-center bg-emerald-50 border border-emerald-150 text-emerald-700 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono">
+                                        <i class="fa-solid fa-circle-check mr-1 text-[9px]"></i>READY
+                                    </span>
+                                </td>
+                                <td class="p-4 text-slate-400 font-mono">2026-07-16 00:32</td>
+                                <td class="p-4 pr-6 text-right space-x-2">
+                                    <button onclick="openDrawer('loftr_coarse_fine', 'ready')" class="text-slate-500 hover:text-brand-accent font-bold px-3 py-2 rounded-lg border border-slate-200 hover:bg-sky-50/50 transition">
+                                        查看产物明细
+                                    </button>
+                                    <button class="bg-brand-accent hover:bg-brand-accentHover text-white font-bold px-4 py-2 rounded-lg shadow-xs transition inline-flex items-center space-x-1.5">
+                                        <i class="fa-solid fa-box-archive text-[10px]"></i>
+                                        <span>下载部署包</span>
+                                    </button>
+                                </td>
+                            </tr>
+
+                            <tr class="hover:bg-sky-50/20 transition bg-amber-50/10">
+                                <td class="p-4 pl-6">
+                                    <div class="font-bold text-slate-800 font-mono text-sm">yolov8_detector_x</div>
+                                    <div class="flex items-center space-x-2 mt-1">
+                                        <span class="bg-sky-50 text-brand-accent font-mono text-[10px] font-bold px-1.5 py-0.2 rounded border border-sky-100">Hi-3559A</span>
+                                        <span class="text-slate-400 text-[10px]">FP16 混合精度</span>
+                                    </div>
+                                </td>
+                                <td class="p-4 font-mono">
+                                    <div class="text-slate-700 font-semibold">精度保持: <span class="text-amber-600 font-bold">94.12%</span></div>
+                                    <div class="text-slate-400 text-[11px] mt-0.5">端侧延时: <b class="text-slate-600 font-medium">8.4ms</b></div>
+                                </td>
+                                <td class="p-4">
+                                    <span class="inline-flex items-center bg-amber-50 border border-amber-150 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono">
+                                        <i class="fa-solid fa-triangle-exclamation mr-1 text-[9px]"></i>PENDING
+                                    </span>
+                                </td>
+                                <td class="p-4 text-slate-400 font-mono">2026-07-15 23:44</td>
+                                <td class="p-4 pr-6 text-right space-x-2">
+                                    <button onclick="openDrawer('yolov8_detector_x', 'pending')" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-lg shadow-xs transition inline-flex items-center space-x-1.5">
+                                        <i class="fa-solid fa-gavel text-[10px]"></i>
+                                        <span>介入审阅标定</span>
+                                    </button>
+                                </td>
+                            </tr>
+
+                            <tr class="hover:bg-sky-50/20 transition text-slate-400">
+                                <td class="p-4 pl-6">
+                                    <div class="font-bold text-slate-600 font-mono text-sm">resnet50_backbone</div>
+                                    <div class="flex items-center space-x-2 mt-1">
+                                        <span class="bg-slate-50 text-slate-400 font-mono text-[10px] px-1.5 py-0.2 rounded border border-slate-200">RK3588</span>
+                                        <span class="text-slate-400/70 text-[10px]">INT8 量化中</span>
+                                    </div>
+                                </td>
+                                <td class="p-4 font-mono text-slate-400/60">--</td>
+                                <td class="p-4">
+                                    <span class="inline-flex items-center bg-slate-100 border border-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold">
+                                        <i class="fa-solid fa-gear mr-1.5 text-[10px] animate-spin"></i>LLM 装配中
+                                    </span>
+                                </td>
+                                <td class="p-4 text-slate-400 font-mono">正在合成...</td>
+                                <td class="p-4 pr-6 text-right">
+                                    <button onclick="openDrawer('resnet50_backbone', 'compiling')" class="text-sky-600 hover:text-brand-accent font-bold px-3 py-2 rounded-lg border border-sky-100 hover:bg-sky-50 transition inline-flex items-center space-x-1.5">
+                                        <i class="fa-solid fa-terminal text-[10px]"></i>
+                                        <span>查看 LLM 思考日志</span>
+                                    </button>
+                                </td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <aside id="detail-drawer" class="w-[500px] bg-white border-l border-sky-100 flex flex-col shrink-0 absolute right-0 top-0 bottom-0 z-40 transform translate-x-full transition-transform duration-300 ease-out shadow-2xl">
+            
+            <div class="p-5 border-b border-sky-100 bg-sky-50/30 flex justify-between items-center">
+                <div>
+                    <span class="text-[9px] font-extrabold text-brand-accent uppercase tracking-widest font-mono">FOUNDRY INSPECTOR</span>
+                    <h3 id="drawer-title" class="text-sm font-bold text-slate-800 mt-0.5 font-mono">任务详情明细</h3>
+                </div>
+                <button onclick="closeDrawer()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-5 space-y-6">
+                <div class="space-y-3">
+                    <h4 class="text-[10px] font-bold text-slate-400 tracking-wider uppercase font-mono">📦 最终出厂产物清单</h4>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between p-3 rounded-xl border border-sky-100 bg-white">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-lg bg-sky-50 border border-sky-100 flex items-center justify-center text-brand-accent"><i class="fa-solid fa-cube text-xs"></i></div>
+                                <div>
+                                    <div class="text-xs font-bold text-slate-800 font-mono">model_quantized.bin</div>
+                                    <div class="text-[10px] text-slate-400">端侧量化模型 · 32.4 MB</div>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-circle-check text-emerald-500 text-sm pr-1"></i>
+                        </div>
+                        <div class="flex items-center justify-between p-3 rounded-xl border border-sky-100 bg-white">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-lg bg-sky-50 border border-sky-100 flex items-center justify-center text-brand-accent"><i class="fa-solid fa-code text-xs"></i></div>
+                                <div>
+                                    <div class="text-xs font-bold text-slate-800 font-mono">libedge_foundry.so</div>
+                                    <div class="text-[10px] text-slate-400">LLM 生成的 C++ SDK · 1.2 MB</div>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-circle-check text-emerald-500 text-sm pr-1"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-[10px] font-bold text-slate-400 tracking-wider uppercase font-mono">🔬 精度与标定证据单</h4>
+                        <span id="drawer-badge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">99.41% Pass</span>
+                    </div>
+                    <div class="bg-sky-50/40 border border-sky-100 rounded-xl p-4 space-y-3 font-mono text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">A面 (PyTorch 原始精度)</span>
+                            <span class="text-slate-700 font-medium">100.00% Baseline</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">B面 (LLM 修复转化图)</span>
+                            <span class="text-slate-700 font-medium">99.98% Cosine Fit</span>
+                        </div>
+                        <div class="flex justify-between border-t border-sky-100 pt-2 font-bold">
+                            <span class="text-slate-500">C面 (端侧量化真机)</span>
+                            <span id="drawer-accuracy" class="text-emerald-600">99.41% (Passed)</span>
+                        </div>
+                    </div>
+
+                    <div id="decision-bar" class="hidden bg-amber-50/80 border border-amber-200 rounded-xl p-4 space-y-3">
+                        <div class="text-xs font-semibold text-slate-800 leading-relaxed">
+                            ⚠️ <span class="text-amber-700 font-bold">LLM 质检拦截</span>：由于硬件量化截断，C面精度跌至 <span class="font-bold text-amber-600 font-mono">94.12%</span>。是否批准强制出厂？
+                        </div>
+                        <div class="flex justify-end space-x-2 pt-1">
+                            <button class="text-xs text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 font-bold px-3 py-2 rounded-lg transition">拒绝并丢弃</button>
+                            <button class="text-xs text-white bg-brand-accent hover:bg-brand-accentHover font-bold px-4 py-2 rounded-lg transition">批准出厂</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col rounded-xl border border-sky-200 bg-sky-50/50 overflow-hidden shadow-xs">
+                    <div class="px-4 py-2 border-b border-sky-200 bg-sky-100/60 flex justify-between items-center font-mono text-[10px]">
+                        <span class="text-sky-700 font-bold uppercase tracking-wider">LLM Coprocessor Log</span>
+                        <span class="text-emerald-600 flex items-center font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>Active</span>
+                    </div>
+                    <div class="p-4 font-mono text-[11px] text-slate-700 space-y-2.5 leading-relaxed h-40 overflow-y-auto">
+                        <div><span class="text-sky-500 font-bold">[Step 1]</span> <span class="text-sky-700 font-bold"><i class="fa-solid fa-brain mr-1.5"></i>LLM:</span> 分析原始网络结构... 发现端侧不支持算子 `GridSample`</div>
+                        <div><span class="text-sky-500 font-bold">[Step 2]</span> <span class="text-amber-600 font-bold"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>AutoFix:</span> 正在自动生成自定义 C++ 平替算子源码...</div>
+                        <div class="text-slate-400 pl-4 font-medium">>> Generating node_grid_sample_fixed.cpp</div>
+                        <div><span class="text-sky-500 font-bold">[Step 3]</span> <span class="text-sky-600 font-bold"><i class="fa-solid fa-microchip mr-1.5"></i>System:</span> 启动海思板卡交叉编译器 aarch64-himix100-linux-g++</div>
+                        <div class="text-emerald-600 pl-4 font-bold">>> [Success] 动态链接库 libedge_foundry.so 生成完成。</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-sky-100 bg-sky-50/30">
+                <button id="drawer-main-btn" class="w-full bg-brand-accent hover:bg-brand-accentHover text-white font-bold py-3 rounded-xl transition shadow-sm flex items-center justify-center space-x-2 border border-sky-500/10">
+                    <i class="fa-solid fa-download"></i>
+                    <span>打包下载完整部署 SDK</span>
+                </button>
+            </div>
+        </aside>
+
+    </div>
+
+    <script>
+        function openDrawer(taskName, status) {
+            const drawer = document.getElementById('detail-drawer');
+            const title = document.getElementById('drawer-title');
+            const badge = document.getElementById('drawer-badge');
+            const accuracy = document.getElementById('drawer-accuracy');
+            const decisionBar = document.getElementById('decision-bar');
+            const mainBtn = document.getElementById('drawer-main-btn');
+
+            title.innerText = taskName;
+            
+            if(status === 'ready') {
+                badge.className = "text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200";
+                badge.innerText = "99.41% Pass";
+                accuracy.className = "text-emerald-600 font-bold";
+                accuracy.innerText = "99.41% (Passed)";
+                decisionBar.classList.add('hidden');
+                mainBtn.className = "w-full bg-brand-accent hover:bg-brand-accentHover text-white font-bold py-3 rounded-xl transition shadow-sm flex items-center justify-center space-x-2 border border-sky-500/10";
+                mainBtn.innerHTML = `<i class="fa-solid fa-download"></i><span>打包下载完整部署 SDK</span>`;
+            } else if (status === 'pending') {
+                badge.className = "text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200";
+                badge.innerText = "94.12% Intercept";
+                accuracy.className = "text-amber-600 font-bold";
+                accuracy.innerText = "94.12% (Warning)";
+                decisionBar.classList.remove('hidden');
+                mainBtn.className = "w-full bg-slate-200 text-slate-400 font-bold py-3 rounded-xl cursor-not-allowed flex items-center justify-center space-x-2";
+                mainBtn.innerHTML = `<i class="fa-solid fa-lock"></i><span>请先通过上方人类终审决策</span>`;
+            } else if (status === 'compiling') {
+                badge.className = "text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 animate-pulse";
+                badge.innerText = "LLM Compiling...";
+                accuracy.className = "text-slate-400 italic";
+                accuracy.innerText = "正在真机测试中...";
+                decisionBar.classList.add('hidden');
+                mainBtn.className = "w-full bg-slate-200 text-slate-400 font-bold py-3 rounded-xl cursor-not-allowed flex items-center justify-center space-x-2";
+                mainBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i><span>流水线装配中，请稍候...</span>`;
+            }
+
+            drawer.classList.remove('translate-x-full');
+        }
+
+        function closeDrawer() {
+            const drawer = document.getElementById('detail-drawer');
+            drawer.classList.add('translate-x-full');
+        }
+    </script>
+
+</body>
+</html>
