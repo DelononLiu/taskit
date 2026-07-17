@@ -7,9 +7,10 @@ import { AuthPage } from '@/core/components/AuthPage'
 import { AuthGuard } from '@/core/components/AuthGuard'
 import TaskitPage from '@/pages/TaskitPage'
 import { DrawerTaskForm } from '@/tasks/model_diff/DrawerTaskForm'
+import { DrawerTaskDetail } from '@/tasks/model_diff/DrawerTaskDetail'
 
 function AppLayout() {
-  const { activeModule, setActiveModule, drawerMode, drawerTitle, openDrawer, closeDrawer } = useAppStore()
+  const { activeModule, setActiveModule, drawerMode, drawerTaskId, drawerTitle, openDrawer, closeDrawer } = useAppStore()
 
   const handleNewTask = () => {
     openDrawer('new-task', undefined, '新建精度比对任务')
@@ -36,7 +37,9 @@ function AppLayout() {
         {drawerMode === 'new-task' && (
           <DrawerTaskForm onSuccess={() => { closeDrawer() }} />
         )}
-        {drawerMode === 'task-detail' && <div>任务详情面板（Task 9）</div>}
+        {drawerMode === 'task-detail' && drawerTaskId != null && (
+          <DrawerTaskDetail taskId={drawerTaskId} />
+        )}
       </DetailDrawer>
     </div>
   )
