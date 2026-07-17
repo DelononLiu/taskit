@@ -6,6 +6,7 @@ import { useAppStore } from '@/stores/appStore'
 import { AuthPage } from '@/core/components/AuthPage'
 import { AuthGuard } from '@/core/components/AuthGuard'
 import TaskitPage from '@/pages/TaskitPage'
+import { DrawerTaskForm } from '@/tasks/model_diff/DrawerTaskForm'
 
 function AppLayout() {
   const { activeModule, setActiveModule, drawerMode, drawerTitle, openDrawer, closeDrawer } = useAppStore()
@@ -32,7 +33,9 @@ function AppLayout() {
         title={drawerTitle}
         onClose={closeDrawer}
       >
-        {drawerMode === 'new-task' && <div>新建任务表单（Task 8）</div>}
+        {drawerMode === 'new-task' && (
+          <DrawerTaskForm onSuccess={() => { closeDrawer() }} />
+        )}
         {drawerMode === 'task-detail' && <div>任务详情面板（Task 9）</div>}
       </DetailDrawer>
     </div>
