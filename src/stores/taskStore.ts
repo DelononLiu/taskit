@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { ComparisonTask, LayerDiff, TaskStatus } from '@/types'
-import { createTask as apiCreateTask, getTask, getTaskLayers } from '@/api'
+import { createTask as apiCreateTask, getTask, getTaskLayers, getTaskHistory } from '@/api'
 
 interface TaskState {
   currentTaskId: number | null
@@ -11,12 +11,19 @@ interface TaskState {
   selectedLayer: string | null
   selectedFramework: string
 
+  // 新增：任务列表
+  tasks: ComparisonTask[]
+  tasksLoading: boolean
+
   createTask: (modelId: string, frameworks: string[]) => Promise<number>
   pollTask: (taskId: number) => Promise<void>
   loadLayers: (taskId: number, framework?: string) => Promise<void>
   setSelectedLayer: (layerName: string | null) => void
   setSelectedFramework: (framework: string) => void
   reset: () => void
+  // 新增
+  fetchTasks: () => Promise<void>
+  fetchTask: (id: number) => Promise<ComparisonTask | null>
 }
 
 export const useTaskStore = create<TaskState>((set, get) => ({
@@ -27,6 +34,29 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   layers: [],
   selectedLayer: null,
   selectedFramework: 'tensorrt',
+
+  // 新增
+  tasks: [],
+  tasksLoading: false,
+
+  fetchTasks: async () => {
+    set({ tasksLoading: true })
+    try {
+      const items = await getTaskHistory()
+      set({ tasks: items as ComparisonTask[], tasksLoading: false })
+    } catch {
+      set({ tasks: [], tasksLoading: false })
+    }
+  },
+
+  fetchTask: async (id) => {
+    try {
+      const task = await getTask(id)
+      return task as ComparisonTask
+    } catch {
+      return null
+    }
+  },
 
   createTask: async (modelId, frameworks) => {
     const task = await apiCreateTask({ modelId, frameworks })
