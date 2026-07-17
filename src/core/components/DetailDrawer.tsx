@@ -45,7 +45,7 @@ export function DetailDrawer({ open, mode, title, onClose, children }: DetailDra
         {/* Header */}
         <div className="p-5 border-b border-sky-100 bg-sky-50/30 flex justify-between items-center shrink-0">
           <div>
-            <span className="text-[9px] font-extrabold text-[#0284c7] uppercase tracking-widest font-mono">
+            <span className="text-[9px] font-extrabold text-brand-accent uppercase tracking-widest font-mono">
               {mode === 'new-task' ? 'NEW TASK' : 'TASK INSPECTOR'}
             </span>
             <h3 className="text-sm font-bold text-slate-800 mt-0.5 font-mono">{title}</h3>

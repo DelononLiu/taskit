@@ -22,11 +22,12 @@
 
 **Files:**
 - Modify: `src/index.html` — 加载 Google Fonts
+- Modify: `tailwind.config.js` — 配置 fontFamily
 - Modify: `src/index.css` — 新增 design tokens
 
 **Interfaces:**
 - Consumes: 无（基础层，无依赖）
-- Produces: 全局 CSS class 和 CSS 变量供所有后续任务使用
+- Produces: 全局设计令牌供所有后续任务使用
 
 - [ ] **Step 1: 在 index.html 中加载字体**
 
@@ -37,9 +38,20 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 ```
 
-- [ ] **Step 2: 在 index.css 中追加设计令牌**
+- [ ] **Step 2: 在 tailwind.config.js 中配置品牌字体**
 
-在现有 `@layer base` 的 `:root` 块中追加品牌色和字体变量：
+修改 `theme.extend.fontFamily`：
+
+```js
+fontFamily: {
+  sans: ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+  mono: ['JetBrains Mono', 'SF Mono', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
+},
+```
+
+- [ ] **Step 3: 在 index.css 中追加设计令牌**
+
+在现有 `@layer base` 的 `:root` 块中追加品牌色变量：
 
 ```css
 /* 追加到 :root 块末尾 */
@@ -49,18 +61,13 @@
 --brand-success: 152 76% 40%;      /* #10b981 emerald-500 */
 ```
 
-同时追加字体声明和品牌 class：
+更新 body 字体声明（使用新字体）：
 
 ```css
-@layer base {
-  * { @apply border-border; }
-  body {
-    @apply bg-background text-foreground;
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  /* 新增：品牌工具类 */
-  .font-mono { font-family: 'JetBrains Mono', monospace !important; }
+body {
+  @apply bg-background text-foreground;
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 ```
 
@@ -736,6 +743,8 @@ export const useAppStore = create<AppState>((set) => ({
 
 - [ ] **Step 2: 重构 App.tsx**
 
+核心变更：App.tsx 和 TaskitPage 之间通过 zustand store 通信，不传 props。Drawer 内容由 App.tsx 根据 store 状态动态渲染，TaskitPage 负责主内容区。
+
 ```tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Header } from '@/core/components/Header'
@@ -763,22 +772,16 @@ function AppLayout() {
         <Sidebar activeModule={activeModule} onModuleChange={setActiveModule} />
 
         <main className="flex-1 p-8 overflow-y-auto">
-          <TaskitPage
-            onOpenNewTask={handleNewTask}
-            onSelectTask={(task) => openDrawer('task-detail', task.id, task.model?.name ?? `任务 #${task.id}`)}
-          />
+          <TaskitPage />
         </main>
       </div>
 
-      {/* Drawer 由 App 层统一管理，根据 mode 动态渲染内容 */}
       <DetailDrawer
         open={drawerMode !== 'closed'}
         mode={drawerMode}
         title={drawerTitle}
         onClose={closeDrawer}
       >
-        {/* 内容由 TaskitPage 根据 drawerTaskId 注入 */}
-        {/* 通过 zustand 订阅或 context 传递 */}
         {drawerMode === 'new-task' && <div>新建任务表单（Task 8）</div>}
         {drawerMode === 'task-detail' && <div>任务详情面板（Task 9）</div>}
       </DetailDrawer>
@@ -833,13 +836,56 @@ git commit -m "refactor: App.tsx 布局重构，集成 Header/Sidebar/Drawer
 ### Task 7: TaskitPage.tsx 重构为主视图
 
 **Files:**
+- Modify: `src/stores/taskStore.ts` — 新增 fetchTasks / fetchTask
 - Modify: `src/pages/TaskitPage.tsx` — 以 TaskTable 为主视图
 
 **Interfaces:**
-- Consumes: TaskTable, DetailDrawer（通过 store 联动）
-- Produces: `<TaskitPage onOpenNewTask onSelectTask />` — 纯路由匹配 + 视图切换
+- Consumes: TaskTable, EmptyState, appStore, taskStore
+- Produces: 主内容区视图（根据 activeModule 切换）
 
-- [ ] **Step 1: 重写 TaskitPage.tsx**
+- [ ] **Step 1: 扩展 taskStore，新增 fetchTasks / fetchTask**
+
+```ts
+// 在现有 taskStore 中追加以下方法和状态
+import { getTaskHistory } from '@/api/task'
+
+interface TaskState {
+  // ... 现有字段保持不变 ...
+  
+  // 新增
+  tasks: ComparisonTask[]
+  tasksLoading: boolean
+  fetchTasks: () => Promise<void>
+  fetchTask: (id: number) => Promise<ComparisonTask | null>
+}
+
+// 在 create 调用中追加
+tasks: [],
+tasksLoading: false,
+
+fetchTasks: async () => {
+  set({ tasksLoading: true })
+  try {
+    const items = await getTaskHistory()
+    set({ tasks: items as ComparisonTask[], tasksLoading: false })
+  } catch {
+    set({ tasks: [], tasksLoading: false })
+  }
+},
+
+fetchTask: async (id) => {
+  try {
+    const task = await getTask(id)
+    return task as ComparisonTask
+  } catch {
+    return null
+  }
+},
+```
+
+- [ ] **Step 2: 重写 TaskitPage.tsx**
+
+通过 store 驱动，不接收父组件 props：
 
 ```tsx
 import { useEffect } from 'react'
@@ -850,49 +896,58 @@ import { useAppStore } from '@/stores/appStore'
 import { useTaskStore } from '@/stores/taskStore'
 import type { ComparisonTask } from '@/types'
 
-interface TaskitPageProps {
-  onOpenNewTask: () => void
-  onSelectTask: (task: ComparisonTask) => void
-}
-
-export default function TaskitPage({ onOpenNewTask, onSelectTask }: TaskitPageProps) {
+export default function TaskitPage() {
   const { id: idStr } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const activeModule = useAppStore((s) => s.activeModule)
   const drawerMode = useAppStore((s) => s.drawerMode)
-  const { tasks, loading, fetchTasks, fetchTask } = useTaskStore()
+  const { tasks, tasksLoading, fetchTasks, fetchTask } = useTaskStore()
+  const openDrawer = useAppStore((s) => s.openDrawer)
 
   // 初始加载任务列表
   useEffect(() => {
-    fetchTasks()
-  }, [])
+    if (activeModule === 'model-diff') {
+      fetchTasks()
+    }
+  }, [activeModule])
 
   // 如果 URL 有 /tasks/:id，打开详情 drawer
   useEffect(() => {
-    if (idStr && drawerMode === 'closed') {
+    if (idStr && drawerMode === 'closed' && activeModule === 'model-diff') {
       const id = parseInt(idStr)
       if (!isNaN(id)) {
         fetchTask(id).then((task) => {
           if (task) {
-            onSelectTask(task)
+            openDrawer('task-detail', task.id, task.model?.name ?? `任务 #${task.id}`)
           }
         })
       }
     }
-  }, [idStr])
+  }, [idStr, activeModule])
+
+  // DeployAgent 预留空态
+  if (activeModule === 'deploy-agent') {
+    return (
+      <EmptyState
+        icon="🏗️"
+        title="部署工坊 · 即将上线"
+        description="LLM 驱动的模型端侧全自动转化、SDK 库与可执行 Demo 构建流水线，敬请期待"
+      />
+    )
+  }
 
   const handleSelectTask = (task: ComparisonTask) => {
-    onSelectTask(task)
+    openDrawer('task-detail', task.id, task.model?.name ?? `任务 #${task.id}`)
     navigate(`/tasks/${task.id}`, { replace: true })
   }
 
   const handleNewTask = () => {
-    onOpenNewTask()
+    openDrawer('new-task', undefined, '新建精度比对任务')
     navigate('/', { replace: true })
   }
 
   return (
     <div className="space-y-6">
-      {/* Page title */}
       <div className="flex justify-between items-end px-1">
         <div>
           <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">
@@ -904,10 +959,9 @@ export default function TaskitPage({ onOpenNewTask, onSelectTask }: TaskitPagePr
         </div>
       </div>
 
-      {/* Task table */}
       <TaskTable
         tasks={tasks}
-        loading={loading}
+        loading={tasksLoading}
         onSelectTask={handleSelectTask}
         onNewTask={handleNewTask}
       />
@@ -916,27 +970,17 @@ export default function TaskitPage({ onOpenNewTask, onSelectTask }: TaskitPagePr
 }
 ```
 
-> 注：这里引用 `useTaskStore`——现有项目 `src/stores/taskStore.ts` 可能不存在或接口不同。如果不存在，需要先改造 taskStore 或使用 API 直接加载。实施时按实际 store 接口调整。
-
-- [ ] **Step 2: 检查现有 taskStore 并适配**
-
-```bash
-cat src/stores/taskStore.ts
-# Expected: 确认是否有 fetchTasks / fetchTask 方法
-# 如果缺少，在 taskStore 中补充：
-#   fetchTasks: () => Promise<ComparisonTask[]>
-#   fetchTask: (id: number) => Promise<ComparisonTask | null>
-```
-
 - [ ] **Step 3: 提交**
 
 ```bash
-git add src/pages/TaskitPage.tsx src/stores/taskStore.ts
+git add src/stores/taskStore.ts src/pages/TaskitPage.tsx
 git commit -m "refactor: TaskitPage 重构为以 TaskTable 为主视图
 
-- 移除页面级表单/结果切换逻辑
+- 扩展 taskStore 新增 fetchTasks / fetchTask
+- 通过 store 驱动，不依赖父组件 props
 - 任务表格作为主视图，新建/详情走 Drawer
-- 支持 /tasks/:id URL 直接打开详情"
+- 支持 /tasks/:id URL 直接打开详情
+- 根据 activeModule 切换内容（含部署工坊空态）
 ```
 
 ---
@@ -1048,51 +1092,33 @@ git commit -m "refactor: ResultViewer 改造为 Drawer 内联详情面板
 
 **Files:**
 - Modify: `src/core/components/Sidebar.tsx`（已在 Task 2 中创建，无需大改）
-- Modify: `src/pages/TaskitPage.tsx` — 根据 activeModule 渲染不同内容
-- Create（可选）：`src/pages/DeployAgentComingSoon.tsx`
 
 **Interfaces:**
 - Consumes: appStore.activeModule
-- Produces: 子产品切换逻辑 + DeployAgent 空态预留
+- Produces: 子产品切换时自动关闭 Drawer（已由 appStore 的 `setActiveModule` 实现）
 
-- [ ] **Step 1: 在 TaskitPage 中添加模块切换**
+- [ ] **Step 1: 验证子产品切换逻辑**
 
-```tsx
-import { useAppStore } from '@/stores/appStore'
+`appStore.setActiveModule` 已在 Task 6 中实现 `set({ activeModule: m, drawerMode: 'closed' })`，切换时自动关闭 Drawer。
 
-// 在 TaskitPage 组件内部
-const activeModule = useAppStore((s) => s.activeModule)
+Sidebar 的 `onModuleChange` 已在 Task 2 中绑定 `setActiveModule`，无需额外改动。
 
-if (activeModule === 'deploy-agent') {
-  return (
-    <EmptyState
-      icon="🏗️"
-      title="部署工坊 · 即将上线"
-      description="LLM 驱动的模型端侧全自动转化、SDK 库与可执行 Demo 构建流水线，敬请期待"
-    />
-  )
-}
+TaskitPage 的模块切换逻辑（含 DeployAgent 空态）已在 Task 7 完成。
 
-// model-diff 继续渲染表格
-```
-
-- [ ] **Step 2: 在 Sidebar 中处理点击"全部任务记录"**
+- [ ] **Step 2: 在 Sidebar 中处理点击"全部任务记录"（可选）**
 
 在 `Sidebar.tsx` 中为"全部任务记录"按钮添加 `onClick`：打开历史抽屉（用现有的 Sheet 组件，或跳转到跨模块任务列表）。
 
-```tsx
-// 可选—根据 spec 注释，MVP 可以省略此功能
-```
+根据 spec 注释，MVP 可以省略此功能。如需实现，引入 `TaskHistoryDrawer` 并在 Sidebar 中控制其 `open` 状态。
 
 - [ ] **Step 3: 提交**
 
 ```bash
-git add src/pages/TaskitPage.tsx src/core/components/Sidebar.tsx
-git commit -m "feat: 添加子产品切换逻辑和 DeployAgent 空态预留页
+git add src/core/components/Sidebar.tsx
+git commit -m "feat: 完善 Sidebar 子产品切换交互
 
-- TaskitPage 根据 activeModule 渲染不同内容
-- DeployAgent 显示即将上线空态
-- Sidebar 切换组件时自动关闭 Drawer"
+- Sidebar 模块切换时自动关闭 Drawer（由 appStore 保证）
+- 预留全部任务记录入口（可选实现）"
 ```
 
 ---
