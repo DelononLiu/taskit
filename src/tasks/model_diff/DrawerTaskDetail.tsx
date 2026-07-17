@@ -26,6 +26,7 @@ export function DrawerTaskDetail({ taskId }: DrawerTaskDetailProps) {
   const [layersLoading, setLayersLoading] = useState(true)
   const [selectedFramework, setSelectedFramework] = useState('tensorrt')
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const selectedLayerData = layers.find((l) => l.layerName === selectedLayer) ?? null
 
@@ -55,6 +56,7 @@ export function DrawerTaskDetail({ taskId }: DrawerTaskDetailProps) {
   }, [taskId])
 
   async function loadRealTask(tid: number) {
+    setLoadError(null)
     try {
       const t = await getTask(tid)
       setTask(t)
@@ -66,13 +68,23 @@ export function DrawerTaskDetail({ taskId }: DrawerTaskDetailProps) {
       rawLayers.forEach((l: LayerDiff) => l.metrics?.forEach((m: LayerMetric) => fwSet.add(m.frameworkId)))
       const firstFw = [...fwSet][0]
       if (firstFw) setSelectedFramework(firstFw)
-      const failed = rawLayers.find((l: any) => l.metrics?.some((m: any) => !m.passed))
+      const failed = rawLayers.find((l: LayerDiff) => l.metrics?.some((m: LayerMetric) => !m.passed))
       setSelectedLayer(failed?.layerName ?? null)
     } catch (e) {
       console.error('load task failed', e)
+      setLoadError(e instanceof Error ? e.message : '加载失败')
     } finally {
       setLayersLoading(false)
     }
+  }
+
+  if (loadError) {
+    return (
+      <div className="rounded-lg border border-fail/30 bg-fail/5 p-4">
+        <p className="text-sm font-medium text-fail">加载失败</p>
+        <p className="text-xs text-fail/80 mt-1">{loadError}</p>
+      </div>
+    )
   }
 
   if (!task) return null

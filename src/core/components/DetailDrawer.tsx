@@ -14,6 +14,7 @@ interface DetailDrawerProps {
 
 export function DetailDrawer({ open, mode, title, onClose, children }: DetailDrawerProps) {
   const prevOpen = useRef(open)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   // Prevent body scroll when drawer is open
   useEffect(() => {
@@ -24,18 +25,36 @@ export function DetailDrawer({ open, mode, title, onClose, children }: DetailDra
     return () => { document.body.style.overflow = '' }
   }, [open])
 
+  // Focus the close button when drawer opens
+  useEffect(() => {
+    if (open) {
+      closeButtonRef.current?.focus()
+    }
+  }, [open])
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      onClose()
+    }
+  }
+
   return (
     <>
       {/* Backdrop */}
       {open && (
         <div
           className="fixed inset-0 bg-black/20 z-40 transition-opacity"
+          aria-hidden="true"
           onClick={onClose}
         />
       )}
 
       {/* Drawer panel */}
       <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onKeyDown={handleKeyDown}
         className={cn(
           'fixed top-0 right-0 h-full w-[500px] bg-white border-l border-sky-100 z-50',
           'flex flex-col shadow-2xl transition-transform duration-300 ease-out',
@@ -51,6 +70,7 @@ export function DetailDrawer({ open, mode, title, onClose, children }: DetailDra
             <h3 className="text-sm font-bold text-slate-800 mt-0.5 font-mono">{title}</h3>
           </div>
           <button
+            ref={closeButtonRef}
             onClick={onClose}
             className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition"
           >

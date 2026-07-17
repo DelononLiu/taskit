@@ -33,7 +33,7 @@ export default function TaskitPage() {
         })
       }
     }
-  }, [idStr, activeModule])
+  }, [idStr, activeModule, drawerMode, fetchTask, openDrawer])
 
   // DeployAgent 预留空态
   if (activeModule === 'deploy-agent') {

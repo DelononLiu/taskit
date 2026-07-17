@@ -193,10 +193,10 @@ export function DrawerTaskForm({ onSuccess }: DrawerTaskFormProps) {
             {/* Framework selectors — three columns with per-slot precision */}
             <div className="grid grid-cols-3 gap-3">
               {/* Baseline — always ONNX Runtime */}
-              <div className="border border-[#1677ff]/20 rounded-lg py-2.5 px-3 bg-[#1677ff]/5">
+              <div className="border border-brand-accent/20 rounded-lg py-2.5 px-3 bg-brand-accent/5">
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">基准</div>
                 <div className="flex items-center gap-1.5 mb-1.5">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: '#1677ff' }} />
+                  <span className="w-2 h-2 rounded-full shrink-0 bg-brand-accent" />
                   <span className="text-xs font-semibold">ONNX Runtime</span>
                 </div>
                 <Select value={baselinePrecision} onValueChange={setBaselinePrecision}>
