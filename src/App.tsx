@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { Header } from '@/core/components/Header'
 import { Sidebar } from '@/core/components/Sidebar'
 import { DetailDrawer } from '@/core/components/DetailDrawer'
@@ -11,6 +11,12 @@ import { DrawerTaskDetail } from '@/tasks/model_diff/DrawerTaskDetail'
 
 function AppLayout() {
   const { activeModule, setActiveModule, drawerMode, drawerTaskId, drawerTitle, openDrawer, closeDrawer } = useAppStore()
+  const navigate = useNavigate()
+
+  const handleCloseDrawer = () => {
+    closeDrawer()
+    navigate('/', { replace: true })
+  }
 
   const handleNewTask = () => {
     openDrawer('new-task', undefined, '新建精度比对任务')
@@ -32,7 +38,7 @@ function AppLayout() {
         open={drawerMode !== 'closed'}
         mode={drawerMode}
         title={drawerTitle}
-        onClose={closeDrawer}
+        onClose={handleCloseDrawer}
       >
         {drawerMode === 'new-task' && (
           <DrawerTaskForm onSuccess={() => { closeDrawer() }} />
