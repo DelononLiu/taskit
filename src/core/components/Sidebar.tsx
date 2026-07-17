@@ -41,10 +41,10 @@ export function Sidebar({ activeModule, onModuleChange }: SidebarProps) {
               className={`
                 w-full flex items-center justify-between px-3 py-3 rounded-xl text-xs transition
                 ${isActive
-                  ? 'bg-sky-50 text-[#0284c7] font-bold border border-sky-100/70'
+                  ? 'bg-sky-50 text-brand-accent font-bold border border-sky-100/70'
                   : isDisabled
                     ? 'text-slate-400 cursor-not-allowed'
-                    : 'text-slate-600 hover:bg-sky-50/50 hover:text-[#0284c7] font-semibold'
+                    : 'text-slate-600 hover:bg-sky-50/50 hover:text-brand-accent font-semibold'
                 }
               `}
             >
@@ -53,7 +53,7 @@ export function Sidebar({ activeModule, onModuleChange }: SidebarProps) {
                 <span>{mod.label}</span>
               </span>
               {isDisabled && (
-                <span className="bg-slate-100 text-slate-500 px-1.5 py-0.2 rounded text-[10px] font-mono">
+                <span className="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded text-[10px] font-mono">
                   即将上线
                 </span>
               )}
@@ -68,13 +68,13 @@ export function Sidebar({ activeModule, onModuleChange }: SidebarProps) {
         </div>
 
         <button
-          className="w-full flex items-center px-3 py-3 rounded-xl text-slate-600 hover:bg-sky-50/50 hover:text-[#0284c7] font-semibold text-xs transition group"
+          className="w-full flex items-center px-3 py-3 rounded-xl text-slate-600 hover:bg-sky-50/50 hover:text-brand-accent font-semibold text-xs transition group"
         >
           <span className="mr-3 text-sm">📁</span>
           <span>全部任务记录</span>
         </button>
 
-        <button className="w-full flex items-center px-3 py-3 rounded-xl text-slate-600 hover:bg-sky-50/50 hover:text-[#0284c7] font-semibold text-xs transition group">
+        <button className="w-full flex items-center px-3 py-3 rounded-xl text-slate-600 hover:bg-sky-50/50 hover:text-brand-accent font-semibold text-xs transition group">
           <span className="mr-3 text-sm">📄</span>
           <span>导出报告</span>
         </button>
@@ -85,7 +85,7 @@ export function Sidebar({ activeModule, onModuleChange }: SidebarProps) {
         <div className="text-[9px] text-sky-400 font-bold uppercase tracking-wider font-mono">
           Backend Node
         </div>
-        <div className="text-[11px] text-sky-700 font-mono font-bold mt-0.5">
+        <div className="text-[11px] text-brand-accent font-mono font-bold mt-0.5">
           10.128.4.15
         </div>
       </div>

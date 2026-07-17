@@ -11,7 +11,7 @@ export function Header({ onNewTask }: HeaderProps) {
       <div className="flex items-center space-x-6">
         <div className="flex items-center space-x-3">
           {/* Logo */}
-          <div className="bg-sky-50 text-[#0284c7] w-10 h-10 rounded-xl flex items-center justify-center border border-sky-200 shadow-sm">
+          <div className="bg-sky-50 text-brand-accent w-10 h-10 rounded-xl flex items-center justify-center border border-sky-200 shadow-sm">
             <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
               <rect width="32" height="32" rx="6" fill="currentColor" />
               <path d="M16 6l8 12H8l8-12z" fill="white" />
@@ -21,13 +21,13 @@ export function Header({ onNewTask }: HeaderProps) {
           <div>
             <div className="flex items-center space-x-2">
               <span className="font-extrabold text-sm tracking-tight text-slate-800">
-                TASKIT <span className="text-[#0284c7] font-black">PLATFORM</span>
+                TASKIT <span className="text-brand-accent font-black">PLATFORM</span>
               </span>
               <span className="bg-sky-500 text-white text-[9px] px-1.5 py-0.5 rounded font-mono font-bold tracking-wider">
                 v2.0
               </span>
             </div>
-            <div className="text-[10px] text-sky-500 font-bold tracking-widest uppercase mt-0.5">
+            <div className="text-[10px] text-brand-accent font-bold tracking-widest uppercase mt-0.5">
               模型精度 · 部署流水线
             </div>
           </div>
@@ -38,11 +38,11 @@ export function Header({ onNewTask }: HeaderProps) {
           <div className="flex items-center space-x-2 bg-sky-50/60 border border-sky-100 px-2.5 py-1 rounded-lg">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-slate-500 font-medium">后端:</span>
-            <span className="font-mono font-bold text-sky-700">已连接</span>
+            <span className="font-mono font-bold text-brand-accent">已连接</span>
           </div>
           <div className="flex items-center space-x-2 bg-sky-50/60 border border-sky-100 px-2.5 py-1 rounded-lg">
             <span className="text-slate-500 font-medium">节点:</span>
-            <span className="font-mono font-bold text-sky-700">10.128.4.15</span>
+            <span className="font-mono font-bold text-brand-accent">10.128.4.15</span>
           </div>
         </div>
       </div>
@@ -51,7 +51,7 @@ export function Header({ onNewTask }: HeaderProps) {
         {onNewTask && (
           <Button
             onClick={onNewTask}
-            className="bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold px-5 py-3 rounded-xl transition shadow-sm flex items-center space-x-2 border border-sky-500/10 h-auto"
+            className="bg-brand-accent hover:bg-brand-accent-hover text-white text-xs font-bold px-5 py-3 rounded-xl transition shadow-sm flex items-center space-x-2 border border-sky-500/10 h-auto"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>新建任务</span>
