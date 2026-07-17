@@ -46,6 +46,12 @@ export default {
           tensorrt: 'hsl(var(--framework-tensorrt))',
           openvino: 'hsl(var(--framework-openvino))',
         },
+        brand: {
+          accent: 'hsl(var(--brand-accent))',
+          'accent-hover': 'hsl(var(--brand-accent-hover))',
+          'light-bg': 'hsl(var(--brand-light-bg))',
+          success: 'hsl(var(--brand-success))',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

@@ -62,6 +62,12 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
+
+    /* Brand tokens */
+    --brand-accent: 201 96% 45%;       /* brighter for visibility on dark bg */
+    --brand-accent-hover: 200 98% 55%; /* lighter hover */
+    --brand-light-bg: 201 50% 12%;     /* dark version of light bg */
+    --brand-success: 152 76% 45%;      /* brighter success */
   }
 }
 
