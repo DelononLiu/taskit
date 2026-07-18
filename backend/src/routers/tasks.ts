@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express'
-import { prisma } from '../lib/prisma.js'
+import { eq, and, desc, count } from 'drizzle-orm'
+import { db } from '../db/index.js'
+import { tasks } from '../db/schema.js'
 import { getModule } from '../tasks/registry.js'
 import { executeTask, cancelTask } from '../lib/task-engine.js'
 
@@ -15,15 +17,13 @@ router.post('/', async (req: Request, res: Response) => {
     // @ts-ignore
     const userId = req.user?.id ?? 1
 
-    const task = await prisma.task.create({
-      data: {
-        userId,
-        module,
-        status: 'pending',
-        params: JSON.stringify(params ?? {}),
-        fileIds: JSON.stringify(fileIds ?? []),
-      },
-    })
+    const task = db.insert(tasks).values({
+      userId,
+      module,
+      status: 'pending',
+      params: JSON.stringify(params ?? {}),
+      fileIds: JSON.stringify(fileIds ?? []),
+    }).returning().get()
 
     // 异步执行
     executeTask(task.id).catch(console.error)
@@ -33,7 +33,7 @@ router.post('/', async (req: Request, res: Response) => {
       module: task.module,
       status: task.status,
       progress: task.progress,
-      createdAt: task.createdAt.toISOString(),
+      createdAt: task.createdAt,
     })
   } catch (e: any) {
     res.status(500).json({ error: e.message })
@@ -50,28 +50,24 @@ router.get('/', async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1
     const limit = parseInt(req.query.limit as string) || 20
 
-    const where: any = { userId }
-    if (module) where.module = module
-    if (status) where.status = status
+    const conditions = [eq(tasks.userId, userId)]
+    if (module) conditions.push(eq(tasks.module, module))
+    if (status) conditions.push(eq(tasks.status, status))
 
-    const [tasks, total] = await Promise.all([
-      prisma.task.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      prisma.task.count({ where }),
+    const [taskList, totalResult] = await Promise.all([
+      db.select().from(tasks).where(and(...conditions)).orderBy(desc(tasks.createdAt)).limit(limit).offset((page - 1) * limit).all(),
+      db.select({ count: count() }).from(tasks).where(and(...conditions)).get(),
     ])
+    const total = totalResult?.count ?? 0
 
     res.json({
-      tasks: tasks.map((t) => ({
+      tasks: taskList.map((t: any) => ({
         id: t.id,
         module: t.module,
         status: t.status,
         progress: t.progress,
-        createdAt: t.createdAt.toISOString(),
-        completedAt: t.completedAt?.toISOString() ?? null,
+        createdAt: t.createdAt,
+        completedAt: t.completedAt ?? null,
       })),
       total,
       page,
@@ -87,7 +83,7 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id)
     if (isNaN(id)) return res.status(400).json({ error: 'invalid id' })
-    const task = await prisma.task.findUnique({ where: { id } })
+    const task = db.select().from(tasks).where(eq(tasks.id, id)).get()
     if (!task) return res.status(404).json({ error: 'not found' })
 
     const resp: any = {
@@ -96,8 +92,8 @@ router.get('/:id', async (req: Request, res: Response) => {
       status: task.status,
       progress: task.progress,
       params: JSON.parse(task.params),
-      createdAt: task.createdAt.toISOString(),
-      completedAt: task.completedAt?.toISOString() ?? null,
+      createdAt: task.createdAt,
+      completedAt: task.completedAt ?? null,
     }
 
     if (task.result) resp.result = JSON.parse(task.result)
@@ -114,17 +110,14 @@ router.post('/:id/cancel', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id)
     if (isNaN(id)) return res.status(400).json({ error: 'invalid id' })
-    const task = await prisma.task.findUnique({ where: { id } })
+    const task = db.select().from(tasks).where(eq(tasks.id, id)).get()
     if (!task) return res.status(404).json({ error: 'not found' })
     if (task.status !== 'running' && task.status !== 'pending') {
       return res.status(400).json({ error: `cannot cancel task in status: ${task.status}` })
     }
 
     cancelTask(task.id)
-    await prisma.task.update({
-      where: { id: task.id },
-      data: { status: 'cancelled', completedAt: new Date() },
-    })
+    db.update(tasks).set({ status: 'cancelled', completedAt: new Date().toISOString() }).where(eq(tasks.id, task.id)).run()
 
     res.json({ id: task.id, status: 'cancelled' })
   } catch (e: any) {
@@ -137,21 +130,19 @@ router.post('/:id/retry', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id)
     if (isNaN(id)) return res.status(400).json({ error: 'invalid id' })
-    const task = await prisma.task.findUnique({ where: { id } })
+    const task = db.select().from(tasks).where(eq(tasks.id, id)).get()
     if (!task) return res.status(404).json({ error: 'not found' })
     if (task.status !== 'failed' && task.status !== 'cancelled') {
       return res.status(400).json({ error: `cannot retry task in status: ${task.status}` })
     }
 
-    const newTask = await prisma.task.create({
-      data: {
-        userId: task.userId,
-        module: task.module,
-        status: 'pending',
-        params: task.params,
-        fileIds: task.fileIds,
-      },
-    })
+    const newTask = db.insert(tasks).values({
+      userId: task.userId,
+      module: task.module,
+      status: 'pending',
+      params: task.params,
+      fileIds: task.fileIds,
+    }).returning().get()
 
     executeTask(newTask.id).catch(console.error)
 
@@ -159,7 +150,7 @@ router.post('/:id/retry', async (req: Request, res: Response) => {
       id: newTask.id,
       module: newTask.module,
       status: newTask.status,
-      createdAt: newTask.createdAt.toISOString(),
+      createdAt: newTask.createdAt,
     })
   } catch (e: any) {
     res.status(500).json({ error: e.message })

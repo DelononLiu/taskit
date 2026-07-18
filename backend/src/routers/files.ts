@@ -2,7 +2,10 @@ import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import path from 'path'
 import fs from 'fs/promises'
-import { prisma } from '../lib/prisma.js'
+import { randomUUID } from 'crypto'
+import { eq } from 'drizzle-orm'
+import { db } from '../db/index.js'
+import { files } from '../db/schema.js'
 import { config } from '../config.js'
 
 const storage = multer.diskStorage({
@@ -28,22 +31,21 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     // @ts-ignore
     const userId = req.user?.id ?? 1
 
-    const record = await prisma.file.create({
-      data: {
-        userId,
-        filename: file.originalname,
-        storedPath: file.path,
-        size: file.size,
-        mimeType: file.mimetype,
-      },
-    })
+    const record = db.insert(files).values({
+      id: randomUUID(),
+      userId,
+      filename: file.originalname,
+      storedPath: file.path,
+      size: file.size,
+      mimeType: file.mimetype,
+    }).returning().get()
 
     res.json({
       id: record.id,
       name: record.filename,
       format: 'onnx',
       size: record.size,
-      uploadTime: record.createdAt.toISOString(),
+      uploadTime: record.createdAt,
     })
   } catch (e: any) {
     res.status(500).json({ error: e.message })
@@ -51,13 +53,13 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
 })
 
 router.get('/:id', async (req: Request, res: Response) => {
-  const file = await prisma.file.findUnique({ where: { id: req.params.id } })
-  if (!file) return res.status(404).json({ error: 'not found' })
+  const fileRecord = db.select().from(files).where(eq(files.id, req.params.id)).get()
+  if (!fileRecord) return res.status(404).json({ error: 'not found' })
   res.json({
-    id: file.id,
-    name: file.filename,
-    size: file.size,
-    uploadTime: file.createdAt.toISOString(),
+    id: fileRecord.id,
+    name: fileRecord.filename,
+    size: fileRecord.size,
+    uploadTime: fileRecord.createdAt,
   })
 })
 

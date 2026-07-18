@@ -1,7 +1,9 @@
 import { spawn } from 'child_process'
 import fs from 'fs/promises'
 import path from 'path'
-import { prisma } from './prisma.js'
+import { eq } from 'drizzle-orm'
+import { db } from '../db/index.js'
+import { tasks, files } from '../db/schema.js'
 import { getModule } from '../tasks/registry.js'
 
 // 临时目录根
@@ -21,10 +23,10 @@ export function cancelTask(taskId: number): boolean {
 }
 
 export async function executeTask(taskId: number): Promise<void> {
-  const task = await prisma.task.findUnique({ where: { id: taskId } })
+  const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
   if (!task || task.status === 'cancelled') return
 
-  await prisma.task.update({ where: { id: taskId }, data: { status: 'running' } })
+  db.update(tasks).set({ status: 'running' }).where(eq(tasks.id, taskId)).run()
 
   let taskDir = ''
   try {
@@ -34,8 +36,8 @@ export async function executeTask(taskId: number): Promise<void> {
     // 解析文件路径
     let inputPath = ''
     if (fileIds.length > 0) {
-      const file = await prisma.file.findUnique({ where: { id: fileIds[0] } })
-      if (file) inputPath = file.storedPath
+      const fileRecord = db.select().from(files).where(eq(files.id, fileIds[0])).get()
+      if (fileRecord) inputPath = fileRecord.storedPath
     }
 
     const mod = getModule(task.module)
@@ -99,14 +101,14 @@ export async function executeTask(taskId: number): Promise<void> {
     runningProcesses.delete(taskId)
 
     // 检查是否被取消
-    const current = await prisma.task.findUnique({ where: { id: taskId } })
+    const current = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
     if (current?.status === 'cancelled') return
 
     if (exitCode !== 0) {
-      await prisma.task.update({
-        where: { id: taskId },
-        data: { status: 'failed', error: stderr.slice(0, 2000) || `Exit code: ${exitCode}` },
-      })
+      db.update(tasks).set({
+        status: 'failed',
+        error: stderr.slice(0, 2000) || `Exit code: ${exitCode}`,
+      }).where(eq(tasks.id, taskId)).run()
       return
     }
 
@@ -117,16 +119,18 @@ export async function executeTask(taskId: number): Promise<void> {
     const output = JSON.parse(outputRaw)
     const parsed = mod.parser?.(output, params) ?? output
 
-    await prisma.task.update({
-      where: { id: taskId },
-      data: { status: 'completed', progress: 100, result: JSON.stringify(parsed), completedAt: new Date() },
-    })
+    db.update(tasks).set({
+      status: 'completed',
+      progress: 100,
+      result: JSON.stringify(parsed),
+      completedAt: new Date().toISOString(),
+    }).where(eq(tasks.id, taskId)).run()
   } catch (e: any) {
     runningProcesses.delete(taskId)
-    await prisma.task.update({
-      where: { id: taskId },
-      data: { status: 'failed', error: e.message?.slice(0, 2000) },
-    })
+    db.update(tasks).set({
+      status: 'failed',
+      error: e.message?.slice(0, 2000),
+    }).where(eq(tasks.id, taskId)).run()
   } finally {
     // 清理临时目录
     if (taskDir) {

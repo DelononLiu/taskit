@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express'
-import { prisma } from '../../lib/prisma.js'
+import { eq } from 'drizzle-orm'
+import { db } from '../../db/index.js'
+import { tasks } from '../../db/schema.js'
 
 const router = Router()
 
@@ -9,7 +11,7 @@ router.get('/modules/model_compare/tasks/:id/layers', async (req: Request, res: 
     if (isNaN(id)) return res.status(400).json({ error: 'invalid id' })
     const framework = req.query.framework as string | undefined
 
-    const task = await prisma.task.findUnique({ where: { id } })
+    const task = db.select().from(tasks).where(eq(tasks.id, id)).get()
     if (!task || !task.result) return res.json({ layers: [] })
 
     const data = JSON.parse(task.result)

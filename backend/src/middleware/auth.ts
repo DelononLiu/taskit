@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import passport from 'passport'
-import { prisma } from '../lib/prisma.js'
+import { db } from '../db/index.js'
+import { users } from '../db/schema.js'
 
 export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   passport.authenticate('jwt', { session: false }, (err: any, user: any) => {
@@ -15,7 +16,7 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
 export const optionalAuth = async (req: Request, _res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
-    const user = await prisma.user.findFirst()
+    const user = db.select().from(users).limit(1).get()
     if (user) (req as any).user = user
     return next()
   }

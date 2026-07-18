@@ -1,22 +1,45 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import express from 'express'
 import request from 'supertest'
 import '../tasks/model_compare/runner.js'
 
-const mockPrisma = vi.hoisted(() => ({
-  task: {
-    create: vi.fn(),
-    findMany: vi.fn(),
-    findUnique: vi.fn(),
-    count: vi.fn(),
-    update: vi.fn(),
-  },
-  file: {
-    findUnique: vi.fn(),
-  },
-}))
+// Drizzle mock chain — use vi.hoisted so mockDb is defined before hoisted vi.mock calls
+const { mockSelectChain, mockInsertChain, mockUpdateChain, mockDb } = vi.hoisted(() => {
+  const selectChain: any = {
+    from: vi.fn(() => selectChain),
+    where: vi.fn(() => selectChain),
+    orderBy: vi.fn(() => selectChain),
+    limit: vi.fn(() => selectChain),
+    offset: vi.fn(() => selectChain),
+    get: vi.fn(),
+    all: vi.fn(),
+  }
 
-vi.mock('../lib/prisma.js', () => ({ prisma: mockPrisma }))
+  const insertChain: any = {
+    values: vi.fn(() => insertChain),
+    returning: vi.fn(() => insertChain),
+    get: vi.fn(),
+  }
+
+  const updateChain: any = {
+    set: vi.fn(() => updateChain),
+    where: vi.fn(() => updateChain),
+    run: vi.fn(),
+  }
+
+  return {
+    mockSelectChain: selectChain,
+    mockInsertChain: insertChain,
+    mockUpdateChain: updateChain,
+    mockDb: {
+      select: vi.fn(() => selectChain),
+      insert: vi.fn(() => insertChain),
+      update: vi.fn(() => updateChain),
+    },
+  }
+})
+
+vi.mock('../db/index.js', () => ({ db: mockDb }))
 vi.mock('../lib/task-engine.js', () => ({
   executeTask: vi.fn().mockResolvedValue(undefined),
   cancelTask: vi.fn(),
@@ -30,6 +53,10 @@ function createApp() {
   app.use('/api/tasks', tasksRouter)
   return app
 }
+
+beforeEach(() => {
+  vi.clearAllMocks()
+})
 
 describe('POST /api/tasks', () => {
   it('returns 400 when module is missing', async () => {
@@ -47,15 +74,14 @@ describe('POST /api/tasks', () => {
   })
 
   it('returns 200 and creates task for model_compare', async () => {
-    const now = new Date()
-    mockPrisma.task.create.mockResolvedValue({
+    mockInsertChain.get.mockReturnValue({
       id: 1,
       module: 'model_compare',
       status: 'pending',
       progress: 0,
       params: '{}',
       fileIds: '[]',
-      createdAt: now,
+      createdAt: '2025-01-15 12:00:00',
     })
 
     const app = createApp()
@@ -80,7 +106,7 @@ describe('GET /api/tasks/:id', () => {
   })
 
   it('returns 404 for nonexistent task', async () => {
-    mockPrisma.task.findUnique.mockResolvedValue(null)
+    mockSelectChain.get.mockReturnValue(undefined)
     const app = createApp()
     const res = await request(app).get('/api/tasks/999')
     expect(res.status).toBe(404)
@@ -88,8 +114,7 @@ describe('GET /api/tasks/:id', () => {
   })
 
   it('returns task details', async () => {
-    const now = new Date()
-    mockPrisma.task.findUnique.mockResolvedValue({
+    mockSelectChain.get.mockReturnValue({
       id: 1,
       module: 'model_compare',
       status: 'completed',
@@ -98,8 +123,8 @@ describe('GET /api/tasks/:id', () => {
       fileIds: '["file-1"]',
       result: '{"overall":{},"layers":[]}',
       error: null,
-      createdAt: now,
-      completedAt: now,
+      createdAt: '2025-01-15 12:00:00',
+      completedAt: '2025-01-15 12:00:00',
     })
 
     const app = createApp()
@@ -113,12 +138,11 @@ describe('GET /api/tasks/:id', () => {
 
 describe('GET /api/tasks', () => {
   it('returns task list with pagination', async () => {
-    const now = new Date()
-    mockPrisma.task.findMany.mockResolvedValue([
-      { id: 1, module: 'model_compare', status: 'completed', progress: 100, createdAt: now, completedAt: now },
-      { id: 2, module: 'model_compare', status: 'running', progress: 50, createdAt: now, completedAt: null },
+    mockSelectChain.all.mockReturnValue([
+      { id: 1, module: 'model_compare', status: 'completed', progress: 100, createdAt: '2025-01-15 12:00:00', completedAt: '2025-01-15 12:00:00' },
+      { id: 2, module: 'model_compare', status: 'running', progress: 50, createdAt: '2025-01-15 12:00:00', completedAt: null },
     ])
-    mockPrisma.task.count.mockResolvedValue(2)
+    mockSelectChain.get.mockReturnValue({ count: 2 })
 
     const app = createApp()
     const res = await request(app).get('/api/tasks')

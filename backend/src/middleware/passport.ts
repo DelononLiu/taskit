@@ -1,6 +1,8 @@
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt'
 import passport from 'passport'
-import { prisma } from '../lib/prisma.js'
+import { eq } from 'drizzle-orm'
+import { db } from '../db/index.js'
+import { users } from '../db/schema.js'
 import { config } from '../config.js'
 
 const opts = {
@@ -11,7 +13,7 @@ const opts = {
 passport.use(
   new JwtStrategy(opts, async (payload, done) => {
     try {
-      const user = await prisma.user.findUnique({ where: { id: payload.sub } })
+      const user = db.select().from(users).where(eq(users.id, payload.sub)).get()
       if (user) return done(null, user)
       return done(null, false)
     } catch (err) {

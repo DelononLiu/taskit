@@ -3,7 +3,7 @@ import cors from 'cors'
 import path from 'path'
 import fs from 'fs'
 import { config } from './config.js'
-import { prisma, resolveDbPath } from './lib/prisma.js'
+import { db, resolveDbPath } from './db/index.js'
 
 // 导入 passport 策略（注册 JWT 策略）
 import './middleware/passport.js'
@@ -50,8 +50,6 @@ app.get('/api/modules', optionalAuth, (_req, res) => {
 
 // ── 启动 ──
 async function main() {
-  await prisma.$connect()
-
   // 确保上传目录存在
   const uploadDir = path.resolve(config.uploadDir)
   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
