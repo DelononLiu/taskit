@@ -10,7 +10,7 @@ const MODULES: NavModule[] = [
   },
   {
     id: 'deploy-agent',
-    label: '部署工坊',
+    label: '模型部署',
     icon: '📦',
     description: 'LLM 驱动模型端侧部署流水线',
     status: 'coming-soon',

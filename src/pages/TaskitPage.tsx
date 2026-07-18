@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { TaskTable } from '@/core/components/TaskTable'
 import { EmptyState } from '@/core/components/EmptyState'
 import { useAppStore } from '@/stores/appStore'
@@ -40,7 +42,7 @@ export default function TaskitPage() {
     return (
       <EmptyState
         icon="🏗️"
-        title="部署工坊 · 即将上线"
+        title="模型部署 · 即将上线"
         description="LLM 驱动的模型端侧全自动转化、SDK 库与可执行 Demo 构建流水线，敬请期待"
       />
     )
@@ -67,6 +69,13 @@ export default function TaskitPage() {
             神经网络模型精度差异对比任务的集中管理面板
           </p>
         </div>
+        <Button
+          onClick={handleNewTask}
+          className="bg-brand-accent hover:bg-brand-accent-hover text-white text-xs font-bold px-5 py-3 rounded-xl transition shadow-sm flex items-center gap-2 border border-sky-500/10 h-auto"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          <span>新建比对任务</span>
+        </Button>
       </div>
 
       <TaskTable

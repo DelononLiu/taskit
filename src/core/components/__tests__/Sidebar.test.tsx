@@ -22,7 +22,7 @@ describe('Sidebar', () => {
 
   // ── 2. Module rendering ──────────────────────────────────────────
   describe('module rendering', () => {
-    it('renders the active module "ModelCompare" with highlight classes', () => {
+    it('renders the active module "精度比对" with highlight classes', () => {
       const { container } = render(
         <Sidebar
           activeModule="model-compare"
@@ -30,7 +30,7 @@ describe('Sidebar', () => {
         />,
       )
 
-      const btn = screen.getByText('ModelCompare').closest('button')!
+      const btn = screen.getByText('精度比对').closest('button')!
       expect(btn.className).toContain('bg-sky-50')
       expect(btn.className).toContain('text-brand-accent')
       expect(btn.className).toContain('font-bold')
@@ -39,7 +39,7 @@ describe('Sidebar', () => {
       expect(btn.getAttribute('disabled')).toBeNull()
     })
 
-    it('renders the disabled module "部署工坊" with "即将上线" badge', () => {
+    it('renders the disabled module "模型部署" with "即将上线" badge', () => {
       const { container } = render(
         <Sidebar
           activeModule="model-compare"
@@ -48,7 +48,7 @@ describe('Sidebar', () => {
       )
 
       // Disabled button has muted classes
-      const btn = screen.getByText('部署工坊').closest('button')!
+      const btn = screen.getByText('模型部署').closest('button')!
       expect(btn.className).toContain('text-slate-400')
       expect(btn.className).toContain('cursor-not-allowed')
       // Button is disabled
@@ -66,7 +66,7 @@ describe('Sidebar', () => {
         />,
       )
 
-      const btn = screen.getByText('部署工坊').closest('button')!
+      const btn = screen.getByText('模型部署').closest('button')!
       expect(btn.className).not.toContain('bg-sky-50')
       expect(btn.className).not.toContain('text-brand-accent')
       expect(btn.className).not.toContain('font-bold')
@@ -84,12 +84,12 @@ describe('Sidebar', () => {
         />,
       )
 
-      fireEvent.click(screen.getByText('ModelCompare'))
+      fireEvent.click(screen.getByText('精度比对'))
       expect(onModuleChange).toHaveBeenCalledTimes(1)
       expect(onModuleChange).toHaveBeenCalledWith('model-compare')
     })
 
-    it('does NOT call onModuleChange when the disabled module "部署工坊" is clicked', () => {
+    it('does NOT call onModuleChange when the disabled module "模型部署" is clicked', () => {
       const onModuleChange = vi.fn()
       render(
         <Sidebar
@@ -98,7 +98,7 @@ describe('Sidebar', () => {
         />,
       )
 
-      fireEvent.click(screen.getByText('部署工坊'))
+      fireEvent.click(screen.getByText('模型部署'))
       expect(onModuleChange).not.toHaveBeenCalled()
     })
   })

@@ -18,13 +18,9 @@ function AppLayout() {
     navigate('/', { replace: true })
   }
 
-  const handleNewTask = () => {
-    openDrawer('new-task', undefined, '新建精度比对任务')
-  }
-
   return (
     <div className="h-screen flex flex-col bg-[#f4f9fd]">
-      <Header onNewTask={handleNewTask} />
+      <Header />
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar activeModule={activeModule} onModuleChange={setActiveModule} />
