@@ -17,7 +17,7 @@ export const useAppStore = create<AppState>((set) => ({
   drawerMode: 'closed',
   drawerTaskId: null,
   drawerTitle: '',
-  setActiveModule: (m) => set({ activeModule: m, drawerMode: 'closed' }),
+  setActiveModule: (m) => set({ activeModule: m, drawerMode: 'closed', drawerTaskId: null, drawerTitle: '' }),
   openDrawer: (mode, taskId, title) =>
     set({ drawerMode: mode, drawerTaskId: taskId ?? null, drawerTitle: title ?? '' }),
   closeDrawer: () => set({ drawerMode: 'closed', drawerTaskId: null, drawerTitle: '' }),
