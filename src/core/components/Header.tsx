@@ -23,9 +23,6 @@ export function Header({ onNewTask }: HeaderProps) {
               <span className="font-extrabold text-sm tracking-tight text-slate-800">
                 TASK<span className="text-brand-accent">IT</span>
               </span>
-              <span className="bg-sky-500 text-white text-[9px] px-1.5 py-0.5 rounded font-mono font-bold tracking-wider">
-                v2.0
-              </span>
             </div>
             <div className="text-[10px] text-brand-accent font-bold tracking-widest uppercase mt-0.5">
               模型工坊
