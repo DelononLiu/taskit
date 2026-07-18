@@ -64,13 +64,15 @@ npm run dev             # 前端 → http://localhost:5173
 npm run dev:all         # 同时启动
 
 # 重启
-npm run kill && npm run dev:all
+kill $(lsof -ti:8000) 2>/dev/null
+kill $(lsof -ti:5173) 2>/dev/null
+npm run dev:all
 
 # 停止
-npm run kill
+kill $(lsof -ti:8000) $(lsof -ti:5173) 2>/dev/null
 ```
 
-> `npm run kill` 会杀全局 vite/tsx 进程——如果本地有多个同类项目，手动 `Ctrl+C` 更安全。
+> 开发环境用 `lsof -ti:端口` 定位进程，自己机器基本不撞端口。
 > 修改 `run.sh` 不需要重启后端；新增/删除 `~/.taskit/runner/` 目录需要。
 
 ## 运行测试
