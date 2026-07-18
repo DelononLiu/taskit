@@ -84,15 +84,20 @@ export async function getTaskHistory(page = 1, limit = 20): Promise<any[]> {
     headers: authHeaders(),
   })
 
-  return (resp.tasks || []).map((t: any) => ({
-    id: t.id,
-    name: `任务 #${t.id}`,
-    model: t.module || '',
-    date: t.createdAt?.slice(0, 16).replace('T', ' ') || '',
-    status: t.status,
-    accuracy: t.status === 'completed' ? '✓ 完成' : t.status === 'failed' ? '✗ 失败' : undefined,
-    progress: t.progress,
-  }))
+  return (resp.tasks || []).map((t: any) => {
+    const dateStr = typeof t.createdAt === 'number'
+      ? new Date(t.createdAt).toISOString()
+      : t.createdAt ?? ''
+    return {
+      id: t.id,
+      model: { name: `任务 #${t.id}`, size: 0 },
+      frameworks: [t.module],
+      status: t.status,
+      progress: t.progress,
+      createdAt: dateStr,
+      completedAt: t.completedAt,
+    }
+  })
 }
 
 export async function cancelTask(taskId: number): Promise<any> {
