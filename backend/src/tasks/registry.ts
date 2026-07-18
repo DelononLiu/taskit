@@ -5,6 +5,10 @@ export interface ModuleDef {
   /** Runner directory name under runners/ (e.g. 'onnx', 'openvino') */
   runner?: string
   parser: (stdout: any, params: any) => any
+  /** Optional metadata for dynamic modules */
+  description?: string
+  icon?: string
+  source?: 'builtin' | 'user'
 }
 
 export const MODULES: Record<string, ModuleDef> = {}

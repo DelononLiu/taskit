@@ -16,7 +16,11 @@ import tasksRouter from './routers/tasks.js'
 // 导入模型触发注册
 import './tasks/model_compare/runner.js'
 import { MODULES, getModule } from './tasks/registry.js'
+import { scanUserRunners } from './lib/user-runners.js'
 import modelCompareRouter from './tasks/model_compare/router.js'
+
+// 扫描用户自定义 runner（在 ~/.taskit/runner/ 下）
+scanUserRunners()
 
 const app = express()
 
@@ -44,7 +48,13 @@ app.use('/api', optionalAuth, modelCompareRouter)
 // ── 模块列表 ──
 app.get('/api/modules', optionalAuth, (_req, res) => {
   res.json(
-    Object.entries(MODULES).map(([key, mod]) => ({ key, name: mod.name }))
+    Object.entries(MODULES).map(([key, mod]) => ({
+      key,
+      name: mod.name,
+      description: (mod as any).description,
+      icon: (mod as any).icon,
+      source: (mod as any).source || 'builtin',
+    }))
   )
 })
 

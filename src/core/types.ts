@@ -1,4 +1,4 @@
-export type ModuleId = 'model-compare' | 'deploy-agent'
+export type ModuleId = string
 
 export interface NavModule {
   id: ModuleId
@@ -6,4 +6,5 @@ export interface NavModule {
   icon: string   // emoji 或 lucide icon name
   description: string
   status: 'active' | 'coming-soon'
+  source?: 'builtin' | 'user'
 }
