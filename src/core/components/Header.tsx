@@ -21,7 +21,7 @@ export function Header({ onNewTask }: HeaderProps) {
           <div>
             <div className="flex items-center space-x-2">
               <span className="font-extrabold text-sm tracking-tight text-slate-800">
-                TASKIT <span className="text-brand-accent font-black">PLATFORM</span>
+                TASK</span><span className="font-extrabold text-sm tracking-tight text-brand-accent">IT</span>
               </span>
               <span className="bg-sky-500 text-white text-[9px] px-1.5 py-0.5 rounded font-mono font-bold tracking-wider">
                 v2.0
