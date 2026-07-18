@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import express from 'express'
 import request from 'supertest'
-import '../tasks/model_diff/runner.js'
+import '../tasks/model_compare/runner.js'
 
 const mockPrisma = vi.hoisted(() => ({
   task: {
@@ -46,11 +46,11 @@ describe('POST /api/tasks', () => {
     expect(res.body.error).toContain('unknown module')
   })
 
-  it('returns 200 and creates task for model_diff', async () => {
+  it('returns 200 and creates task for model_compare', async () => {
     const now = new Date()
     mockPrisma.task.create.mockResolvedValue({
       id: 1,
-      module: 'model_diff',
+      module: 'model_compare',
       status: 'pending',
       progress: 0,
       params: '{}',
@@ -60,13 +60,13 @@ describe('POST /api/tasks', () => {
 
     const app = createApp()
     const res = await request(app).post('/api/tasks').send({
-      module: 'model_diff',
+      module: 'model_compare',
       fileIds: [],
       params: {},
     })
     expect(res.status).toBe(200)
     expect(res.body.id).toBe(1)
-    expect(res.body.module).toBe('model_diff')
+    expect(res.body.module).toBe('model_compare')
     expect(res.body.status).toBe('pending')
   })
 })
@@ -91,7 +91,7 @@ describe('GET /api/tasks/:id', () => {
     const now = new Date()
     mockPrisma.task.findUnique.mockResolvedValue({
       id: 1,
-      module: 'model_diff',
+      module: 'model_compare',
       status: 'completed',
       progress: 100,
       params: '{"frameworks":["tensorrt"]}',
@@ -115,8 +115,8 @@ describe('GET /api/tasks', () => {
   it('returns task list with pagination', async () => {
     const now = new Date()
     mockPrisma.task.findMany.mockResolvedValue([
-      { id: 1, module: 'model_diff', status: 'completed', progress: 100, createdAt: now, completedAt: now },
-      { id: 2, module: 'model_diff', status: 'running', progress: 50, createdAt: now, completedAt: null },
+      { id: 1, module: 'model_compare', status: 'completed', progress: 100, createdAt: now, completedAt: now },
+      { id: 2, module: 'model_compare', status: 'running', progress: 50, createdAt: now, completedAt: null },
     ])
     mockPrisma.task.count.mockResolvedValue(2)
 

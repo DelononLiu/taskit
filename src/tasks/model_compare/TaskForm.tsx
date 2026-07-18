@@ -23,7 +23,7 @@ interface Props {
   onTaskCreated: (taskId: number) => void
 }
 
-export function ModelDiffForm({ onTaskCreated }: Props) {
+export function ModelCompareForm({ onTaskCreated }: Props) {
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)

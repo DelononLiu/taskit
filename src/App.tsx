@@ -6,8 +6,8 @@ import { useAppStore } from '@/stores/appStore'
 import { AuthPage } from '@/core/components/AuthPage'
 import { AuthGuard } from '@/core/components/AuthGuard'
 import TaskitPage from '@/pages/TaskitPage'
-import { DrawerTaskForm } from '@/tasks/model_diff/DrawerTaskForm'
-import { DrawerTaskDetail } from '@/tasks/model_diff/DrawerTaskDetail'
+import { DrawerTaskForm } from '@/tasks/model_compare/DrawerTaskForm'
+import { DrawerTaskDetail } from '@/tasks/model_compare/DrawerTaskDetail'
 
 function AppLayout() {
   const { activeModule, setActiveModule, drawerMode, drawerTaskId, drawerTitle, openDrawer, closeDrawer } = useAppStore()

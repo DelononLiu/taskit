@@ -13,7 +13,7 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  activeModule: 'model-diff',
+  activeModule: 'model-compare',
   drawerMode: 'closed',
   drawerTaskId: null,
   drawerTitle: '',

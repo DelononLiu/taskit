@@ -8,7 +8,7 @@ export interface ModuleDef {
 }
 
 export const MODULES: Record<string, ModuleDef> = {
-  // 注册在 model_diff/index.ts 中
+  // 注册在 model_compare/index.ts 中
 }
 
 export function getModule(name: string): ModuleDef | undefined {

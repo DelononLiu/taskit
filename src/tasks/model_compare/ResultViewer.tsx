@@ -24,7 +24,7 @@ interface Props {
   onNewTask: () => void
 }
 
-export function ModelDiffResult({ taskId, onNewTask }: Props) {
+export function ModelCompareResult({ taskId, onNewTask }: Props) {
   const [task, setTask] = useState<ComparisonTask | null>(null)
   const [layers, setLayers] = useState<LayerDiff[]>([])
   const [graphData, setGraphData] = useState<GraphData | null>(null)

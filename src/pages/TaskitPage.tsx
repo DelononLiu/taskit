@@ -16,14 +16,14 @@ export default function TaskitPage() {
 
   // 初始加载任务列表
   useEffect(() => {
-    if (activeModule === 'model-diff') {
+    if (activeModule === 'model-compare') {
       fetchTasks()
     }
   }, [activeModule])
 
   // 如果 URL 有 /tasks/:id，打开详情 drawer
   useEffect(() => {
-    if (idStr && drawerMode === 'closed' && activeModule === 'model-diff') {
+    if (idStr && drawerMode === 'closed' && activeModule === 'model-compare') {
       const id = parseInt(idStr)
       if (!isNaN(id)) {
         fetchTask(id).then((task) => {
@@ -61,10 +61,10 @@ export default function TaskitPage() {
       <div className="flex justify-between items-end px-1">
         <div>
           <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">
-            模型精度比对 · 任务大盘
+            ModelCompare · 任务大盘
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            神经网络模型精度差异分析任务的集中管理面板
+            神经网络模型精度差异对比任务的集中管理面板
           </p>
         </div>
       </div>

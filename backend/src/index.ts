@@ -14,9 +14,9 @@ import filesRouter from './routers/files.js'
 import tasksRouter from './routers/tasks.js'
 
 // 导入模型触发注册
-import './tasks/model_diff/runner.js'
+import './tasks/model_compare/runner.js'
 import { MODULES, getModule } from './tasks/registry.js'
-import modelDiffRouter from './tasks/model_diff/router.js'
+import modelCompareRouter from './tasks/model_compare/router.js'
 
 const app = express()
 
@@ -39,7 +39,7 @@ app.use('/auth', authRouter)
 import { optionalAuth } from './middleware/auth.js'
 app.use('/api/files', optionalAuth, filesRouter)
 app.use('/api/tasks', optionalAuth, tasksRouter)
-app.use('/api', optionalAuth, modelDiffRouter)
+app.use('/api', optionalAuth, modelCompareRouter)
 
 // ── 模块列表 ──
 app.get('/api/modules', optionalAuth, (_req, res) => {

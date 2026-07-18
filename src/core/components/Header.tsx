@@ -28,7 +28,7 @@ export function Header({ onNewTask }: HeaderProps) {
               </span>
             </div>
             <div className="text-[10px] text-brand-accent font-bold tracking-widest uppercase mt-0.5">
-              模型精度 · 部署流水线
+              ModelCompare · 部署工坊
             </div>
           </div>
         </div>

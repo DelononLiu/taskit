@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import '../tasks/model_diff/runner.js'
+import '../tasks/model_compare/runner.js'
 import { MODULES } from '../tasks/registry.js'
 
-describe('model_diff runner', () => {
-  const mod = MODULES.model_diff
+describe('model_compare runner', () => {
+  const mod = MODULES.model_compare
 
   it('is registered with correct name', () => {
     expect(mod.name).toBe('模型精度比对')

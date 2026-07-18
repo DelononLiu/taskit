@@ -1,4 +1,4 @@
-export type ModuleId = 'model-diff' | 'deploy-agent'
+export type ModuleId = 'model-compare' | 'deploy-agent'
 
 export interface NavModule {
   id: ModuleId

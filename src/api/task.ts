@@ -17,7 +17,7 @@ export async function createTask(params: CreateTaskParams): Promise<ComparisonTa
   }
 
   const body = {
-    module: 'model_diff',
+    module: 'model_compare',
     fileIds: params.modelId ? [params.modelId] : [],
     params: {
       frameworks: [...new Set(params.frameworks)],
@@ -69,7 +69,7 @@ export async function getTaskLayers(taskId: number, framework?: string): Promise
   }
 
   const qs = framework ? `?framework=${framework}` : ''
-  const resp: any = await api.get(`/modules/model_diff/tasks/${taskId}/layers${qs}`, {
+  const resp: any = await api.get(`/modules/model_compare/tasks/${taskId}/layers${qs}`, {
     headers: authHeaders(),
   })
   return { layers: resp.layers || [], graph: resp.graph ?? null }

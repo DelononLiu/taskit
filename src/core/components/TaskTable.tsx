@@ -52,7 +52,7 @@ export function TaskTable({
     return (
       <EmptyState
         icon="🔬"
-        title="尚未创建精度比对任务"
+        title="尚未创建比对任务"
         description="上传 .onnx 模型文件并选择目标框架，开始分析精度差异"
         actionLabel="新建比对任务"
         onAction={onNewTask}

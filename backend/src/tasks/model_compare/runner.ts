@@ -8,7 +8,7 @@ function parseModelDiffOutput(stdout: any, _params: any) {
   }
 }
 
-MODULES.model_diff = {
+MODULES.model_compare = {
   name: '模型精度比对',
   runner: 'onnx',
   parser: parseModelDiffOutput,
