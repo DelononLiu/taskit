@@ -1,96 +1,129 @@
-# Taskit
+# Taskit — 多框架模型精度比对平台
 
-多框架模型精度比对与部署管理平台。核心模式：
+**通用任务平台，支持模型精度比对与部署管理。**
+
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6)
+![React](https://img.shields.io/badge/React-18-61dafb)
+![Express](https://img.shields.io/badge/Express-4-000000)
+![SQLite](https://img.shields.io/badge/SQLite-drizzle-003B57)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+---
+
+## TL;DR
+
+上传 ONNX 模型 → 选择对比框架 → 后台执行推理 → 查看精度差异报告。支持 ONNX Runtime / TensorRT / OpenVINO 多框架层级别精度比对，通过 Drawer 面板完成所有操作，无需页面跳转。
+
+## 核心特性
 
 ```
-上传模型 → 创建 Task → 后台执行 → 查看结果
+上传模型 → 配置框架 → 执行比对 → 精度报告
 ```
+
+四区布局：Header + Sidebar + TaskTable 主视图 + DetailDrawer。所有操作（新建任务、查看详情）均通过右侧滑出面板完成，主视图始终展示任务大盘。支持子产品扩展（部署工坊即将上线）。
+
+## 快速启动
+
+```bash
+# 安装依赖
+npm install && cd backend && npm install && cd ..
+
+# 初始化数据库
+cd backend && npx drizzle-kit push && cd ..
+
+# 一键启动
+npm run dev:all
+
+# 或分别启动
+npm run dev              # 前端 → http://localhost:5173
+npm run dev:backend      # 后端 → http://localhost:8000
+```
+
+首次访问自动跳转登录页，注册后即可使用。
+
+## 环境要求
+
+- Node.js 18+
+- npm 网络（纯 npm 安装，无需 GitHub 直连）
 
 ## 技术栈
 
 | 层 | 技术 |
-|---|---|
+|---|------|
 | 前端 | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui |
 | 状态管理 | zustand |
 | 字体 | Plus Jakarta Sans + JetBrains Mono |
 | 后端 | Express, TypeScript |
 | 数据库 | SQLite（drizzle-orm + better-sqlite3） |
 | 认证 | JWT（passport.js） |
-| 任务执行 | subprocess shell 命令，脚本语言无关 |
+| 任务执行 | subprocess shell 命令，语言无关 |
 | 测试 | Vitest |
-
-## 快速开始
-
-```bash
-# 1. 安装依赖
-npm install && cd backend && npm install && cd ..
-
-# 2. 初始化数据库
-cd backend && npx drizzle-kit push && cd ..
-
-# 3. 启动
-npm run dev:all
-# 后端 → http://localhost:8000
-# 前端 → http://localhost:5173
-```
 
 ## 架构
 
 ```
-┌──────────────────────────────────────────────┐
-│ Header  76px — TASKIT PLATFORM              │
-├──────────┬───────────────────────────────────┤
-│ Sidebar  │ Content (TaskTable 主视图)         │
-│ 240px    │                                    │
-│          │  ┌─ 过滤栏 + 搜索 ──────────────┐  │
-│ Model    │  ├──────────────────────────────┤  │
-│ Compare  │  │ 任务表格                       │  │
-│          │  │ 模型 │ 指标 │ 状态 │ 操作     │  │
-│ 部署工坊  │  └──────────────────────────────┘  │
-│ (即将上线)│                                    │
-│          │  新建/详情 → DetailDrawer (500px)   │
-└──────────┴───────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│ Header  76px — TASKIT PLATFORM v2.0             │
+├──────────┬───────────────────────────────────────┤
+│ Sidebar  │ Content (TaskTable 主视图)             │
+│ 240px    │                                        │
+│          │  ┌─ 过滤栏 + 搜索 ──────────────────┐ │
+│ Model    │  ├──────────────────────────────────┤ │
+│ Compare  │  │ 任务表格                           │ │
+│          │  │ 模型 │ 精度 │ 状态 │ 完成时间    │ │
+│ 部署工坊  │  └──────────────────────────────────┘ │
+│ (即将上线)│                                        │
+│          │  新建/详情 → DetailDrawer 500px        │
+└──────────┴───────────────────────────────────────┘
 ```
+
+详细架构设计见 [`docs/superpowers/specs/2026-07-17-taskit-platform-layout-design.md`](docs/superpowers/specs/2026-07-17-taskit-platform-layout-design.md)。
 
 ## 项目结构
 
 ```
-src/
-├── core/                      # 平台骨架
-│   ├── components/            # Header, Sidebar, TaskTable, DetailDrawer, StatusBadge, EmptyState
-│   ├── types.ts               # ModuleId, NavModule
-│   └── api/                   # auth API
-├── pages/
-│   └── TaskitPage.tsx         # 主页面（按 activeModule 切换子产品）
-├── tasks/
-│   ├── registry.ts            # 模块注册
-│   ├── _template/             # 新模块模板
-│   └── model_compare/         # ModelCompare（模型精度比对）
-│       ├── DrawerTaskForm.tsx      # 新建任务（Drawer 内）
-│       ├── DrawerTaskDetail.tsx    # 任务详情（Drawer 内）
-│       ├── OverviewChart.tsx       # 雷达图
-│       ├── LayerTable.tsx          # 层明细表格
-│       └── ExecutionTree.tsx       # 执行链路图
-├── stores/                    # zustand（appStore, taskStore, authStore, uiStore）
-├── api/                       # HTTP + mock
-├── components/ui/             # shadcn/ui 组件
-├── types/                     # TypeScript 类型
-└── lib/                       # utils
-
-backend/
-├── src/
-│   ├── db/                    # drizzle schema + client
-│   │   ├── schema.ts          # users, files, tasks
-│   │   └── index.ts           # better-sqlite3 + drizzle
-│   ├── routers/               # auth, files, tasks
-│   ├── middleware/             # JWT auth, passport
-│   ├── lib/                   # task-engine (subprocess 执行器)
+├── src/                          # 前端
+│   ├── core/                     # 平台骨架（Header, Sidebar, TaskTable, DetailDrawer）
+│   ├── pages/
+│   │   └── TaskitPage.tsx        # 主页面（按 activeModule 切换子产品）
 │   ├── tasks/
-│   │   ├── registry.ts        # MODULES 注册
-│   │   └── model_compare/     # runner + router
-│   └── __tests__/
-├── drizzle.config.ts
-└── drizzle/                   # migration 文件
+│   │   ├── registry.ts           # 模块注册
+│   │   ├── _template/            # 新模块模板
+│   │   └── model_compare/        # ModelCompare（表单, 图表, 表格, 执行树）
+│   ├── stores/                   # zustand（appStore, taskStore, authStore, uiStore）
+│   ├── api/                      # HTTP 客户端 + mock
+│   ├── components/ui/            # shadcn/ui 组件
+│   ├── types/                    # TypeScript 类型
+│   └── lib/                      # utils
+├── backend/                      # Express 后端
+│   └── src/
+│       ├── db/                   # drizzle schema + better-sqlite3 client
+│       ├── routers/              # auth, files, tasks
+│       ├── middleware/            # JWT + passport
+│       ├── lib/                  # task-engine（subprocess 执行器）
+│       ├── tasks/                # 模块注册 + model_compare runner
+│       └── __tests__/
+├── runners/                      # 外部推理脚本（语言无关）
+├── docs/
+│   ├── DeployAgent-ui.html       # DeployAgent UI 设计参考
+│   └── superpowers/              # 开发过程归档 (specs + plans)
+└── AGENTS.md                     # AI Agent 开发指南
+```
+
+## 开发命令
+
+```bash
+# 运行测试
+npm test                    # 前端（Vitest）
+cd backend && npm test      # 后端（Vitest）
+
+# 类型检查
+npx tsc --noEmit            # 前端
+cd backend && npx tsc --noEmit  # 后端
+
+# 数据库
+cd backend && npx drizzle-kit push   # 同步 schema
+cd backend && npx drizzle-kit studio # 可视化管理
 ```
 
 ## API
@@ -110,35 +143,28 @@ GET    /api/modules/model_compare/tasks/:id/layers   层差异数据
 
 ## 添加新子产品
 
-复制模板，改三处：
-
 ```bash
 cp -r src/tasks/_template src/tasks/my_module
 ```
 
-1. **`TaskForm.tsx`** — 表单组件（会被嵌入 Drawer）
-2. **`ResultViewer.tsx`** — 结果展示组件（会被嵌入 Drawer）
-3. **`backend/src/tasks/`** — 新模块的 runner + router
-
-注册：
+三步注册：
 
 ```ts
-// src/tasks/registry.ts + backend/src/tasks/registry.ts
-MODULES.my_module = {
-  name: '我的模块',
-  TaskForm: MyTaskForm,
-  ResultViewer: MyTaskResult,
-}
+// 1. 前端：src/tasks/registry.ts
+MODULES.my_module = { name: '我的模块', TaskForm: MyForm, ResultViewer: MyResult }
+
+// 2. 后端：backend/src/tasks/registry.ts（含 runner + router）
+
+// 3. 侧边栏：src/core/components/Sidebar.tsx → MODULES 数组追加入口
 ```
 
-```ts
-// src/core/components/Sidebar.tsx — MODULES 数组中加一条
-{ id: 'my-module', label: '我的模块', icon: '🔧', description: '...', status: 'active' }
-```
+## 如何贡献
 
-## 开发约定
+1. 先读 [`AGENTS.md`](AGENTS.md) 了解开发规范和 TDD 纪律
+2. 理解核心流程：上传 → 配置 → 执行 → 结果
+3. 提交前通过所有测试
+4. Commit 消息使用中文
 
-- **Git commit 消息使用中文**（`feat:` / `fix:` / `refactor:` / `test:` / `docs:` / `chore:`）
-- **品牌令牌** — `text-brand-accent`、`bg-brand-accent`，不硬编码颜色
-- **TDD** — 修改代码后跑测试，测试不过不提交
-- 详见 `AGENTS.md`
+## License
+
+MIT
