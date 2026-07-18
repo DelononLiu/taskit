@@ -31,6 +31,7 @@ export function ModelCompareForm({ onTaskCreated }: Props) {
   const [model, setModel] = useState<ModelFile | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [frameworkOptions, setFrameworkOptions] = useState(FW_OPTIONS)
   const [comparisonSlots, setComparisonSlots] = useState<{ frameworkId: string; precision: string }[]>([
     { frameworkId: 'tensorrt', precision: 'auto' },
   ])
@@ -61,6 +62,20 @@ export function ModelCompareForm({ onTaskCreated }: Props) {
     }
   }, [])
 
+  // Fetch framework options from API (includes user runners)
+  useEffect(() => {
+    fetch('/api/modules/model_compare/frameworks')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setFrameworkOptions(data)
+        }
+      })
+      .catch(() => {
+        // silently fall back to frameworkOptions
+      })
+  }, [])
+
   const handleFileSelect = useCallback((file: File) => {
     if (!file.name.endsWith('.onnx')) return
     setSelectedFile(file)
@@ -88,7 +103,7 @@ export function ModelCompareForm({ onTaskCreated }: Props) {
       if (seen.has(key)) {
         toast({
           title: '配置冲突',
-          description: `${FW_OPTIONS.find(f => f.value === slot.frameworkId)?.label} (${slot.precision}) 重复配置，请调整`,
+          description: `${frameworkOptions.find(f => f.value === slot.frameworkId)?.label} (${slot.precision}) 重复配置，请调整`,
           variant: 'destructive',
         })
         return
@@ -251,7 +266,7 @@ export function ModelCompareForm({ onTaskCreated }: Props) {
                     }}>
                       <SelectTrigger className="h-7 text-[11px] mb-1"><SelectValue placeholder="框架" /></SelectTrigger>
                       <SelectContent>
-                        {FW_OPTIONS.map((fw) => (
+                        {frameworkOptions.map((fw) => (
                           <SelectItem key={fw.value} value={fw.value} className="text-xs">
                             <span className="flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: fw.color }} />
@@ -286,7 +301,7 @@ export function ModelCompareForm({ onTaskCreated }: Props) {
                       }}>
                         <SelectTrigger className="h-7 text-[11px] mb-1"><SelectValue placeholder="框架" /></SelectTrigger>
                         <SelectContent>
-                          {FW_OPTIONS.map((fw) => (
+                          {frameworkOptions.map((fw) => (
                             <SelectItem key={fw.value} value={fw.value} className="text-xs">
                               <span className="flex items-center gap-1.5">
                                 <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: fw.color }} />
@@ -310,7 +325,7 @@ export function ModelCompareForm({ onTaskCreated }: Props) {
                   ) : (
                     <button onClick={() => {
                       const used = comparisonSlots.map(s => s.frameworkId)
-                      const first = FW_OPTIONS.find(fw => !used.includes(fw.value)) || FW_OPTIONS[0]
+                      const first = frameworkOptions.find(fw => !used.includes(fw.value)) || frameworkOptions[0]
                       setComparisonSlots([...comparisonSlots, { frameworkId: first.value, precision: 'auto' }])
                     }}
                       className="border border-dashed border-border rounded-lg py-2.5 px-3 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground hover:border-muted-foreground/40 transition-colors cursor-pointer">
@@ -379,7 +394,7 @@ export function ModelCompareForm({ onTaskCreated }: Props) {
                 disabled={comparisonSlots.length === 0} onClick={handleRun}>
                 <Layers className="h-4 w-4" />
                 {comparisonSlots.length > 0
-                  ? `开始分析（${comparisonSlots.map(s => `${FW_OPTIONS.find(f => f.value === s.frameworkId)?.label || s.frameworkId} ${s.precision.toUpperCase()}`).join(' + ')}）`
+                  ? `开始分析（${comparisonSlots.map(s => `${frameworkOptions.find(f => f.value === s.frameworkId)?.label || s.frameworkId} ${s.precision.toUpperCase()}`).join(' + ')}）`
                   : '请选择对比框架'}
               </Button>
             </div>

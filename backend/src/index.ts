@@ -15,12 +15,9 @@ import tasksRouter from './routers/tasks.js'
 
 // 导入模型触发注册
 import './tasks/model_compare/runner.js'
-import { MODULES, getModule } from './tasks/registry.js'
-import { scanUserRunners } from './lib/user-runners.js'
+import { MODULES } from './tasks/registry.js'
+import { getUserFrameworks } from './lib/user-runners.js'
 import modelCompareRouter from './tasks/model_compare/router.js'
-
-// 扫描用户自定义 runner（在 ~/.taskit/runner/ 下）
-scanUserRunners()
 
 const app = express()
 
@@ -56,6 +53,17 @@ app.get('/api/modules', optionalAuth, (_req, res) => {
       source: (mod as any).source || 'builtin',
     }))
   )
+})
+
+// ── 模型比对框架列表（内置 + 用户 runner） ──
+app.get('/api/modules/model_compare/frameworks', optionalAuth, (_req, res) => {
+  const builtinFrameworks = [
+    { value: 'onnxruntime', label: 'ONNX Runtime', color: '#1677ff' },
+    { value: 'tensorrt', label: 'TensorRT', color: '#9333ea' },
+    { value: 'openvino', label: 'OpenVINO', color: '#f97316' },
+  ]
+  const userFrameworks = getUserFrameworks()
+  res.json([...builtinFrameworks, ...userFrameworks])
 })
 
 // ── 启动 ──

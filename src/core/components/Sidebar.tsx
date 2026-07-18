@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import type { ModuleId, NavModule } from '@/core/types'
 
 const MODULES: NavModule[] = [
@@ -24,35 +23,10 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeModule, onModuleChange }: SidebarProps) {
-  const [userModules, setUserModules] = useState<NavModule[]>([])
-
-  useEffect(() => {
-    fetch('/api/modules')
-      .then((res) => res.json())
-      .then((data: any[]) => {
-        const user = data
-          .filter((m) => m.source === 'user')
-          .map((m) => ({
-            id: m.key,
-            label: m.name,
-            icon: m.icon || '🧩',
-            description: m.description || '',
-            status: 'active' as const,
-            source: 'user' as const,
-          }))
-        setUserModules(user)
-      })
-      .catch(() => {
-        // silently fail — API might not be up during dev
-      })
-  }, [])
-
-  const allModules = [...MODULES, ...userModules]
-
   return (
     <aside className="w-60 border-r border-sky-100 bg-background flex flex-col shrink-0 p-4">
       <div className="space-y-1.5 flex-1">
-        {allModules.map((mod) => {
+        {MODULES.map((mod) => {
           const isActive = activeModule === mod.id
           const isDisabled = mod.status === 'coming-soon'
           return (

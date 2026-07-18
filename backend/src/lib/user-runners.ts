@@ -1,18 +1,19 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-import { MODULES } from '../tasks/registry.js'
 
-interface RunnerConfig {
-  name: string
-  description?: string
-  icon?: string
+export interface UserFramework {
+  value: string
+  label: string
+  color: string
+  runnerPath: string
 }
 
-export function scanUserRunners() {
+export function getUserFrameworks(): UserFramework[] {
   const dir = path.join(os.homedir(), '.taskit', 'runner')
-  if (!fs.existsSync(dir)) return
+  if (!fs.existsSync(dir)) return []
 
+  const results: UserFramework[] = []
   const entries = fs.readdirSync(dir, { withFileTypes: true })
   for (const entry of entries) {
     if (!entry.isDirectory()) continue
@@ -21,25 +22,17 @@ export function scanUserRunners() {
     if (!fs.existsSync(runSh)) continue
 
     const configPath = path.join(runnerDir, 'config.json')
-    let cfg: RunnerConfig = { name: entry.name }
+    let cfg: any = {}
     if (fs.existsSync(configPath)) {
-      try {
-        cfg = { ...cfg, ...JSON.parse(fs.readFileSync(configPath, 'utf-8')) }
-      } catch {
-        // ignore malformed config.json
-      }
+      try { cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8')) } catch {}
     }
 
-    const moduleKey = `user:${entry.name}`
-    if (MODULES[moduleKey]) continue // don't override existing
-
-    MODULES[moduleKey] = {
-      name: cfg.name,
-      shell: `bash ${runSh} --task-dir {task_dir} --task-id {task_id}`,
-      parser: (output: any) => output, // pass through
-      description: cfg.description,
-      icon: cfg.icon,
-      source: 'user',
-    }
+    results.push({
+      value: entry.name,
+      label: cfg.name || entry.name,
+      color: cfg.color || '#6366f1',
+      runnerPath: runSh,
+    })
   }
+  return results
 }
