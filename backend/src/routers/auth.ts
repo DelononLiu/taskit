@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '../db/index.js'
 import { users } from '../db/schema.js'
 import { config } from '../config.js'
+import { authenticateLdap } from '../middleware/ldap.js'
 
 const router = Router()
 
@@ -13,6 +14,11 @@ router.post('/register', async (req: Request, res: Response) => {
     const { email, password, name } = req.body
     if (!email || !password) {
       return res.status(400).json({ error: 'email and password required' })
+    }
+
+    // When LDAP is enabled, LDAP users are managed externally — reject self-registration
+    if (config.ldap.enabled) {
+      return res.status(403).json({ error: 'registration disabled — LDAP users are managed externally' })
     }
 
     const existing = db.select().from(users).where(eq(users.email, email)).get()
@@ -36,6 +42,28 @@ router.post('/login', async (req: Request, res: Response) => {
     const { email, password } = req.body
     if (!email || !password) return res.status(400).json({ error: 'email and password required' })
 
+    // LDAP authentication — attempt BEFORE local auth when LDAP is enabled
+    if (config.ldap.enabled) {
+      const ldapUser = await authenticateLdap(email, password)
+      if (ldapUser) {
+        // Auto-create or find local user record
+        let user = db.select().from(users).where(eq(users.email, ldapUser.email)).get()
+        if (!user) {
+          user = db.insert(users).values({
+            email: ldapUser.email,
+            password: '',
+            name: ldapUser.displayName || ldapUser.uid,
+          }).returning().get()
+        }
+        const token = jwt.sign({ sub: user.id, email: user.email }, config.jwtSecret, {
+          expiresIn: config.jwtExpiresIn as any,
+        })
+        return res.json({ token, user: { id: user.id, email: user.email, name: user.name } })
+      }
+      // LDAP auth failed — fall through to local auth (could be a local user)
+    }
+
+    // Local bcrypt authentication
     const user = db.select().from(users).where(eq(users.email, email)).get()
     if (!user) return res.status(401).json({ error: 'invalid credentials' })
 
