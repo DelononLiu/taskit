@@ -1,173 +1,144 @@
 # Taskit
 
-通用任务平台。核心模式：
+多框架模型精度比对与部署管理平台。核心模式：
 
 ```
-上传文件 → 创建 Task → 后台执行 → 查看结果
+上传模型 → 创建 Task → 后台执行 → 查看结果
 ```
-
-Task 是唯一的核心抽象。平台管理任务生命周期，不关心任务内容。
-模型精度比对 (`tasks/model_diff/`) 是第一个任务类型，后续可扩展日志分析、数据报表等。
-
----
-
-## 架构
-
-```
-src/
-├── core/              # 平台层（所有任务共用）
-│   ├── api/           # 通用 API 调用
-│   ├── components/    # TopNav / TaskHistoryDrawer / AuthPage
-│   └── pages/         # HomePage / TaskPage（按 task.module 路由）
-│
-├── tasks/             # 你的各种任务
-│   ├── registry.ts    # 任务注册表
-│   ├── _template/     # 新任务的模板
-│   └── model_diff/    # 模型精度比对
-│       ├── TaskForm.tsx    # 创建任务的表单
-│       ├── ResultViewer.tsx # 任务结果展示
-│       └── mockData.ts     # 开发用 mock 数据
-
-backend/
-├── core/              # 平台层
-│   ├── middleware/     # JWT 认证
-│   ├── lib/           # task-engine（subprocess 执行器）
-│   └── routers/       # auth / files / tasks CRUD
-│
-├── tasks/             # 后端任务定义
-│   ├── registry.ts    # 任务注册表
-│   └── model_diff/
-│       ├── runner.ts  # shell 命令模板 + stdout 解析
-│       └── router.ts  # 任务专有路由（/layers）
-```
-
-**核心设计**：`Task` 表用 `module` + `params`(JSON) + `result`(JSON) 三个字段桥接前后端。一个表管所有任务类型。
-
----
 
 ## 技术栈
 
 | 层 | 技术 |
 |---|---|
-| 前端 | React + TypeScript + Vite + Tailwind CSS + shadcn/ui |
-| 后端 | Express + TypeScript |
-| 数据库 | SQLite（Prisma ORM） |
+| 前端 | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui |
+| 状态管理 | zustand |
+| 字体 | Plus Jakarta Sans + JetBrains Mono |
+| 后端 | Express, TypeScript |
+| 数据库 | SQLite（drizzle-orm + better-sqlite3） |
 | 认证 | JWT（passport.js） |
-| 任务执行 | `subprocess("shell 命令")`，脚本语言无关 |
-
----
+| 任务执行 | subprocess shell 命令，脚本语言无关 |
+| 测试 | Vitest |
 
 ## 快速开始
 
 ```bash
-# 1. 安装前端依赖
-npm install
+# 1. 安装依赖
+npm install && cd backend && npm install && cd ..
 
-# 2. 安装后端依赖
-cd backend && npm install && cd ..
+# 2. 初始化数据库
+cd backend && npx drizzle-kit push && cd ..
 
-# 3. 初始化数据库
-cd backend && npx prisma db push && cd ..
-
-# 4. 一键启动前后端
+# 3. 启动
 npm run dev:all
 # 后端 → http://localhost:8000
 # 前端 → http://localhost:5173
-
-# 或分别启动
-npm run dev            # 仅前端
-npm run dev:backend    # 仅后端
 ```
 
-首次访问 `/` 会跳转到 `/login`，注册账号后自动登录。
-
----
-
-## 任务生命周期
+## 架构
 
 ```
-前端提交表单
-  → POST /api/tasks { module, fileIds, params }
-  → 创建 Task（status=pending）
-  → 后台 subprocess(shell 命令)
-  → 解析 stdout JSON → 存入 Task.result
-  → 前端轮询 GET /api/tasks/:id → status=completed
-  → 前端展示 ResultViewer
+┌──────────────────────────────────────────────┐
+│ Header  76px — TASKIT PLATFORM              │
+├──────────┬───────────────────────────────────┤
+│ Sidebar  │ Content (TaskTable 主视图)         │
+│ 240px    │                                    │
+│          │  ┌─ 过滤栏 + 搜索 ──────────────┐  │
+│ Model    │  ├──────────────────────────────┤  │
+│ Compare  │  │ 任务表格                       │  │
+│          │  │ 模型 │ 指标 │ 状态 │ 操作     │  │
+│ 部署工坊  │  └──────────────────────────────┘  │
+│ (即将上线)│                                    │
+│          │  新建/详情 → DetailDrawer (500px)   │
+└──────────┴───────────────────────────────────┘
 ```
 
----
+## 项目结构
 
-## 添加新任务
-
-复制模板目录，改三处：
-
-```bash
-cp -r src/tasks/model_diff src/tasks/my_task
 ```
+src/
+├── core/                      # 平台骨架
+│   ├── components/            # Header, Sidebar, TaskTable, DetailDrawer, StatusBadge, EmptyState
+│   ├── types.ts               # ModuleId, NavModule
+│   └── api/                   # auth API
+├── pages/
+│   └── TaskitPage.tsx         # 主页面（按 activeModule 切换子产品）
+├── tasks/
+│   ├── registry.ts            # 模块注册
+│   ├── _template/             # 新模块模板
+│   └── model_compare/         # ModelCompare（模型精度比对）
+│       ├── DrawerTaskForm.tsx      # 新建任务（Drawer 内）
+│       ├── DrawerTaskDetail.tsx    # 任务详情（Drawer 内）
+│       ├── OverviewChart.tsx       # 雷达图
+│       ├── LayerTable.tsx          # 层明细表格
+│       └── ExecutionTree.tsx       # 执行链路图
+├── stores/                    # zustand（appStore, taskStore, authStore, uiStore）
+├── api/                       # HTTP + mock
+├── components/ui/             # shadcn/ui 组件
+├── types/                     # TypeScript 类型
+└── lib/                       # utils
 
-1. **`TaskForm.tsx`** — 上传什么文件、填什么参数
-2. **`ResultViewer.tsx`** — 结果怎么展示
-3. **`runner.ts`** — 调哪个 shell 脚本，怎么解析输出
-
-然后在 `tasks/registry.ts` 注册：
-
-```typescript
-// src/tasks/registry.ts
-MODULES.my_task = {
-  name: '我的任务',
-  icon: 'FileText',
-  TaskForm: MyTaskForm,
-  ResultViewer: MyTaskResult,
-}
+backend/
+├── src/
+│   ├── db/                    # drizzle schema + client
+│   │   ├── schema.ts          # users, files, tasks
+│   │   └── index.ts           # better-sqlite3 + drizzle
+│   ├── routers/               # auth, files, tasks
+│   ├── middleware/             # JWT auth, passport
+│   ├── lib/                   # task-engine (subprocess 执行器)
+│   ├── tasks/
+│   │   ├── registry.ts        # MODULES 注册
+│   │   └── model_compare/     # runner + router
+│   └── __tests__/
+├── drizzle.config.ts
+└── drizzle/                   # migration 文件
 ```
-
----
 
 ## API
 
-### 通用（所有任务共享）
 ```
 POST   /auth/register            注册
 POST   /auth/login               登录 → JWT
-POST   /api/files/upload         上传文件
+POST   /api/files/upload         上传模型文件
 POST   /api/tasks                创建任务 { module, fileIds, params }
 GET    /api/tasks                任务列表（分页，可筛 module/status）
 GET    /api/tasks/:id            任务详情（含 result）
 POST   /api/tasks/:id/cancel     取消运行中任务
 POST   /api/tasks/:id/retry      重试失败任务
+
+GET    /api/modules/model_compare/tasks/:id/layers   层差异数据
 ```
 
-### 任务专有
-```
-GET    /api/modules/model_diff/tasks/:id/layers?framework=xxx   层差异数据
+## 添加新子产品
+
+复制模板，改三处：
+
+```bash
+cp -r src/tasks/_template src/tasks/my_module
 ```
 
----
+1. **`TaskForm.tsx`** — 表单组件（会被嵌入 Drawer）
+2. **`ResultViewer.tsx`** — 结果展示组件（会被嵌入 Drawer）
+3. **`backend/src/tasks/`** — 新模块的 runner + router
 
-## 项目结构
+注册：
 
+```ts
+// src/tasks/registry.ts + backend/src/tasks/registry.ts
+MODULES.my_module = {
+  name: '我的模块',
+  TaskForm: MyTaskForm,
+  ResultViewer: MyTaskResult,
+}
 ```
-├── src/                    # 前端
-│   ├── core/               # 平台
-│   │   ├── api/            # HTTP 客户端
-│   │   ├── components/     # 通用组件
-│   │   └── pages/          # 路由页面
-│   ├── tasks/              # 任务目录
-│   │   ├── registry.ts     # 任务注册
-│   │   └── model_diff/     # 模型比对任务
-│   ├── stores/             # 状态管理
-│   ├── types/              # 类型定义
-│   └── App.tsx             # 路由入口
-│
-├── backend/                # 后端
-│   ├── src/
-│   │   ├── core/           # 平台
-│   │   ├── tasks/          # 任务目录
-│   │   └── index.ts        # 入口
-│   └── prisma/             # 数据库 schema
-│
-├── runners/                # 外部 shell 脚本（和项目语言无关）
-├── dev.sh                  # 一键启动
-├── .env.development        # 开发环境配置
-└── docs/                   # 设计文档
+
+```ts
+// src/core/components/Sidebar.tsx — MODULES 数组中加一条
+{ id: 'my-module', label: '我的模块', icon: '🔧', description: '...', status: 'active' }
 ```
+
+## 开发约定
+
+- **Git commit 消息使用中文**（`feat:` / `fix:` / `refactor:` / `test:` / `docs:` / `chore:`）
+- **品牌令牌** — `text-brand-accent`、`bg-brand-accent`，不硬编码颜色
+- **TDD** — 修改代码后跑测试，测试不过不提交
+- 详见 `AGENTS.md`
