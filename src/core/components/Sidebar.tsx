@@ -3,7 +3,7 @@ import type { ModuleId, NavModule } from '@/core/types'
 const MODULES: NavModule[] = [
   {
     id: 'model-compare',
-    label: 'ModelCompare',
+    label: '精度比对',
     icon: '📊',
     description: '神经网络模型精度差异对比分析',
     status: 'active',
