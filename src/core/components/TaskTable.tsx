@@ -1,5 +1,6 @@
-import { Search, Eye } from 'lucide-react'
+import { Search, Eye, Plus } from 'lucide-react'
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/core/components/StatusBadge'
 import { EmptyState } from '@/core/components/EmptyState'
 import type { ComparisonTask } from '@/types'
@@ -82,16 +83,25 @@ export function TaskTable({
           </div>
         </div>
 
-        {/* 搜索框 */}
-        <div className="relative w-full md:w-72">
-          <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜索模型名称..."
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 pl-8 py-2 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-brand-accent transition font-medium"
-          />
+        {/* 搜索框 + 新建 */}
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative w-full md:w-72">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="搜索模型名称..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 pl-8 py-2 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-brand-accent transition font-medium"
+            />
+          </div>
+          <Button
+            onClick={onNewTask}
+            className="bg-brand-accent hover:bg-brand-accent-hover text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-1.5 border border-sky-500/10 h-auto shrink-0"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>新建比对</span>
+          </Button>
         </div>
       </div>
 

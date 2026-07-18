@@ -1,7 +1,5 @@
 import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { TaskTable } from '@/core/components/TaskTable'
 import { EmptyState } from '@/core/components/EmptyState'
 import { useAppStore } from '@/stores/appStore'
@@ -59,28 +57,11 @@ export default function TaskitPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-end px-1">
-        <div>
-          <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">
-            精度比对
-          </h2>
-        </div>
-        <Button
-          onClick={handleNewTask}
-          className="bg-brand-accent hover:bg-brand-accent-hover text-white text-xs font-bold px-5 py-3 rounded-xl transition shadow-sm flex items-center gap-2 border border-sky-500/10 h-auto"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          <span>新建比对任务</span>
-        </Button>
-      </div>
-
-      <TaskTable
-        tasks={tasks}
-        loading={tasksLoading}
-        onSelectTask={handleSelectTask}
-        onNewTask={handleNewTask}
-      />
-    </div>
+    <TaskTable
+      tasks={tasks}
+      loading={tasksLoading}
+      onSelectTask={handleSelectTask}
+      onNewTask={handleNewTask}
+    />
   )
 }
