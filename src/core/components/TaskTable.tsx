@@ -101,11 +101,11 @@ export function TaskTable({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-sky-50/40 border-b border-sky-100 text-[10px] font-bold tracking-wider text-slate-400 uppercase font-mono">
-                <th className="p-4 pl-6 w-[28%]">模型 / 目标框架</th>
-                <th className="p-4 w-[18%]">精度指标</th>
-                <th className="p-4 w-[16%]">状态</th>
-                <th className="p-4 w-[16%]">完成时间</th>
-                <th className="p-4 pr-6 text-right w-[22%]">操作</th>
+                <th className="py-2.5 px-4 pl-6 w-[28%]">模型 / 目标框架</th>
+                <th className="py-2.5 px-4 w-[18%]">精度指标</th>
+                <th className="py-2.5 px-4 w-[16%]">状态</th>
+                <th className="py-2.5 px-4 w-[16%]">完成时间</th>
+                <th className="py-2.5 px-4 pr-6 text-right w-[22%]">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
@@ -130,11 +130,11 @@ export function TaskTable({
                     onClick={() => onSelectTask(task)}
                     className="hover:bg-brand-light-bg/40 transition cursor-pointer group"
                   >
-                    <td className="p-4 pl-6">
-                      <div className="font-bold text-slate-800 font-mono text-sm">
+                    <td className="py-2.5 px-4 pl-6">
+                      <div className="font-bold text-slate-800 font-mono text-xs">
                         {task.model?.name ?? `task_${task.id}`}
                       </div>
-                      <div className="flex items-center space-x-2 mt-1">
+                      <div className="flex items-center space-x-1.5 mt-0.5">
                         {(task.frameworks ?? []).map((fw) => (
                           <span
                             key={fw}
@@ -145,7 +145,7 @@ export function TaskTable({
                         ))}
                       </div>
                     </td>
-                    <td className="p-4 font-mono">
+                    <td className="py-2.5 px-4 font-mono">
                       {task.status === 'completed' ? (
                         <>
                           <div className="text-slate-700 font-semibold">
@@ -168,10 +168,10 @@ export function TaskTable({
                     <td className="p-4">
                       <StatusBadge status={task.status} />
                     </td>
-                    <td className="p-4 text-slate-400 font-mono">
+                    <td className="py-2.5 px-4 text-slate-400 font-mono">
                       {task.completedAt ?? (task.status === 'running' ? '正在执行...' : task.createdAt ?? '—')}
                     </td>
-                    <td className="p-4 pr-6 text-right">
+                    <td className="py-2.5 px-4 pr-6 text-right">
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
