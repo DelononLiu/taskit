@@ -162,9 +162,10 @@ describe('TaskTable', () => {
       expect(screen.getByText('yolov8')).toBeDefined()
       expect(screen.getByText('gpt2')).toBeDefined()
 
-      // Framework tags are rendered (onnxruntime appears in 3 tasks, openvino in 2)
-      const onnxruntimeTags = screen.getAllByText('onnxruntime')
-      expect(onnxruntimeTags.length).toBe(3)
+      // Baseline framework column shows ONNX Runtime for each task
+      const baselineTags = screen.getAllByText('ONNX Runtime')
+      expect(baselineTags.length).toBe(4)
+      // Target framework tags (non-ONNX only)
       const openvinoTags = screen.getAllByText('openvino')
       expect(openvinoTags.length).toBe(2)
       expect(screen.getByText('transformers')).toBeDefined()

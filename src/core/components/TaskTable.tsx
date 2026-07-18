@@ -116,7 +116,10 @@ export function TaskTable({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-muted/50 border-b border-sky-100 text-[10px] font-bold tracking-wider text-muted-foreground uppercase font-mono">
-                <th className="py-2.5 px-4 pl-6">模型 / 目标框架</th>
+                <th className="py-2.5 px-2 pl-6 w-[40px]">#</th>
+                <th className="py-2.5 px-2">模型</th>
+                <th className="py-2.5 px-2 w-[100px]">基准框架</th>
+                <th className="py-2.5 px-2 w-[130px]">目标框架</th>
                 <th className="py-2.5 px-4 w-[140px]">精度指标</th>
                 <th className="py-2.5 px-4 w-[90px]">状态</th>
                 <th className="py-2.5 px-4 w-[90px]">开始时间</th>
@@ -127,31 +130,41 @@ export function TaskTable({
             <tbody className="divide-y divide-border text-xs">
               {loading && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-muted-foreground text-xs">
+                  <td colSpan={9} className="p-8 text-center text-muted-foreground text-xs">
                     加载中...
                   </td>
                 </tr>
               )}
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-muted-foreground text-xs">
+                  <td colSpan={9} className="p-8 text-center text-muted-foreground text-xs">
                     无匹配任务
                   </td>
                 </tr>
               )}
               {!loading &&
-                filtered.map((task) => (
+                filtered.map((task, i) => (
                   <tr
                     key={task.id}
                     onClick={() => onSelectTask(task)}
                     className="hover:bg-brand-light-bg/40 transition cursor-pointer group"
                   >
-                    <td className="py-2.5 px-4 pl-6">
+                    <td className="py-2.5 px-2 pl-6 text-muted-foreground font-mono text-[11px]">
+                      {i + 1}
+                    </td>
+                    <td className="py-2.5 px-2">
                       <div className="font-bold text-foreground font-mono text-xs">
                         {task.model?.name ?? `task_${task.id}`}
                       </div>
-                      <div className="flex items-center space-x-1.5 mt-0.5">
-                        {(task.frameworks ?? []).map((fw) => (
+                    </td>
+                    <td className="py-2.5 px-2">
+                      <span className="bg-brand-light-bg text-brand-accent font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border border-sky-100">
+                        ONNX Runtime
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-2">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {(task.frameworks ?? []).filter((fw: string) => fw !== 'onnxruntime').map((fw: string) => (
                           <span
                             key={fw}
                             className="bg-brand-light-bg text-brand-accent font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border border-sky-100"
