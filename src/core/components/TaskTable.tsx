@@ -38,6 +38,8 @@ export function TaskTable({
   // 如果父组件不传过滤器状态，使用本地状态
   const [localStatus, setLocalStatus] = useState('')
   const [localSearch, setLocalSearch] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const status = filterStatus ?? localStatus
   const setStatus = onFilterStatusChange ?? setLocalStatus
   const search = searchQuery ?? localSearch
@@ -46,6 +48,8 @@ export function TaskTable({
   const filtered = tasks.filter((t) => {
     if (status && t.status !== status) return false
     if (search && !t.model?.name.toLowerCase().includes(search.toLowerCase())) return false
+    if (startDate && t.createdAt && new Date(t.createdAt) < new Date(startDate)) return false
+    if (endDate && t.createdAt && new Date(t.createdAt) > new Date(endDate + 'T23:59:59')) return false
     return true
   })
 
@@ -64,45 +68,60 @@ export function TaskTable({
   return (
     <div className="space-y-4">
       {/* 过滤栏 */}
-      <div className="bg-background p-3.5 rounded-xl border border-sky-100 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-3 text-xs">
-          {/* 状态过滤 */}
-          <div className="flex items-center space-x-1.5 bg-muted border border-border px-3 py-2 rounded-lg">
-            <span className="text-muted-foreground font-medium">状态:</span>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="bg-transparent font-bold text-foreground focus:outline-none cursor-pointer text-xs"
-            >
-              {STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
+      <div className="bg-background p-3.5 rounded-xl border border-sky-100 shadow-xs flex flex-wrap items-center gap-3">
+        {/* 搜索框 */}
+        <div className="relative w-56">
+          <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="搜索模型名称..."
+            className="w-full bg-muted border border-border rounded-lg px-2.5 pl-8 py-2 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-brand-accent transition font-medium"
+          />
         </div>
 
-        {/* 搜索框 + 新建 */}
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative w-full md:w-72">
-            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="搜索模型名称..."
-              className="w-full bg-muted border border-border rounded-lg px-2.5 pl-8 py-2 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-brand-accent transition font-medium"
-            />
-          </div>
-          <Button
-            onClick={onNewTask}
-            className="bg-brand-accent hover:bg-brand-accent-hover text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-1.5 border border-sky-500/10 h-auto shrink-0"
+        {/* 状态过滤 */}
+        <div className="flex items-center space-x-1.5 bg-muted border border-border px-3 py-2 rounded-lg text-xs">
+          <span className="text-muted-foreground font-medium">状态:</span>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="bg-transparent font-bold text-foreground focus:outline-none cursor-pointer text-xs"
           >
-            <Plus className="h-3.5 w-3.5" />
-            <span>新建比对</span>
-          </Button>
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
+
+        {/* 时间过滤 */}
+        <div className="flex items-center gap-1.5 text-xs">
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="bg-muted border border-border rounded-lg px-2.5 py-2 text-xs text-foreground focus:outline-none focus:border-brand-accent transition font-medium"
+          />
+          <span className="text-muted-foreground">—</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="bg-muted border border-border rounded-lg px-2.5 py-2 text-xs text-foreground focus:outline-none focus:border-brand-accent transition font-medium"
+          />
+        </div>
+
+        {/* 新建按钮 */}
+        <Button
+          onClick={onNewTask}
+          className="bg-brand-accent hover:bg-brand-accent-hover text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-1.5 border border-sky-500/10 h-auto shrink-0 ml-auto"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          <span>新建比对</span>
+        </Button>
       </div>
 
       {/* 表格 */}
