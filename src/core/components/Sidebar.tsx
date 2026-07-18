@@ -50,7 +50,7 @@ export function Sidebar({ activeModule, onModuleChange }: SidebarProps) {
   const allModules = [...MODULES, ...userModules]
 
   return (
-    <aside className="w-60 border-r border-sky-100 bg-white flex flex-col shrink-0 p-4">
+    <aside className="w-60 border-r border-sky-100 bg-background flex flex-col shrink-0 p-4">
       <div className="space-y-1.5 flex-1">
         {allModules.map((mod) => {
           const isActive = activeModule === mod.id
@@ -65,8 +65,8 @@ export function Sidebar({ activeModule, onModuleChange }: SidebarProps) {
                 ${isActive
                   ? 'bg-sky-50 text-brand-accent font-bold border border-sky-100/70'
                   : isDisabled
-                    ? 'text-slate-400 cursor-not-allowed'
-                    : 'text-slate-600 hover:bg-sky-50/50 hover:text-brand-accent font-semibold'
+                    ? 'text-muted-foreground cursor-not-allowed'
+                    : 'text-muted-foreground hover:bg-sky-50/50 hover:text-brand-accent font-semibold'
                 }
               `}
             >
@@ -75,7 +75,7 @@ export function Sidebar({ activeModule, onModuleChange }: SidebarProps) {
                 <span>{mod.label}</span>
               </span>
               {isDisabled && (
-                <span className="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded text-[10px] font-mono">
+                <span className="bg-muted text-muted-foreground px-1.5 py-0.5 rounded text-[10px] font-mono">
                   即将上线
                 </span>
               )}

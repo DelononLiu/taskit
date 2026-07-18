@@ -56,23 +56,23 @@ export function DetailDrawer({ open, mode, title, onClose, children }: DetailDra
         aria-label={title}
         onKeyDown={handleKeyDown}
         className={cn(
-          'fixed top-0 right-0 h-full w-[500px] bg-white border-l border-sky-100 z-50',
+          'fixed top-0 right-0 h-full w-[500px] bg-background border-l border-sky-100 z-50',
           'flex flex-col shadow-2xl transition-transform duration-300 ease-out',
           open ? 'translate-x-0' : 'translate-x-full'
         )}
       >
         {/* Header */}
-        <div className="p-5 border-b border-sky-100 bg-sky-50/30 flex justify-between items-center shrink-0">
+        <div className="p-5 border-b border-sky-100 bg-muted/50 flex justify-between items-center shrink-0">
           <div>
             <span className="text-[9px] font-extrabold text-brand-accent uppercase tracking-widest font-mono">
               {mode === 'new-task' ? 'NEW TASK' : 'TASK INSPECTOR'}
             </span>
-            <h3 className="text-sm font-bold text-slate-800 mt-0.5 font-mono">{title}</h3>
+            <h3 className="text-sm font-bold text-foreground mt-0.5 font-mono">{title}</h3>
           </div>
           <button
             ref={closeButtonRef}
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition"
+            className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted transition"
           >
             <X className="h-4 w-4" />
           </button>

@@ -19,7 +19,7 @@ function AppLayout() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-[#f4f9fd]">
+    <div className="h-screen flex flex-col bg-muted/30">
       <Header />
 
       <div className="flex flex-1 overflow-hidden">

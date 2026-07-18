@@ -34,7 +34,7 @@ describe('Sidebar', () => {
 
       // Disabled button has muted classes
       const btn = screen.getByText('模型部署').closest('button')!
-      expect(btn.className).toContain('text-slate-400')
+      expect(btn.className).toContain('text-muted-foreground')
       expect(btn.className).toContain('cursor-not-allowed')
       // Button is disabled
       expect(btn.getAttribute('disabled')).not.toBeNull()

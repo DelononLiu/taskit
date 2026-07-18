@@ -64,15 +64,15 @@ export function TaskTable({
   return (
     <div className="space-y-4">
       {/* 过滤栏 */}
-      <div className="bg-white p-3.5 rounded-xl border border-sky-100 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-background p-3.5 rounded-xl border border-sky-100 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center space-x-3 text-xs">
           {/* 状态过滤 */}
-          <div className="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg">
-            <span className="text-slate-400 font-medium">状态:</span>
+          <div className="flex items-center space-x-1.5 bg-muted border border-border px-3 py-2 rounded-lg">
+            <span className="text-muted-foreground font-medium">状态:</span>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="bg-transparent font-bold text-slate-700 focus:outline-none cursor-pointer text-xs"
+              className="bg-transparent font-bold text-foreground focus:outline-none cursor-pointer text-xs"
             >
               {STATUS_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -86,13 +86,13 @@ export function TaskTable({
         {/* 搜索框 + 新建 */}
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="relative w-full md:w-72">
-            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="搜索模型名称..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 pl-8 py-2 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-brand-accent transition font-medium"
+              className="w-full bg-muted border border-border rounded-lg px-2.5 pl-8 py-2 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-brand-accent transition font-medium"
             />
           </div>
           <Button
@@ -106,11 +106,11 @@ export function TaskTable({
       </div>
 
       {/* 表格 */}
-      <div className="bg-white rounded-2xl border border-sky-100 shadow-xs overflow-hidden">
+      <div className="bg-background rounded-2xl border border-sky-100 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-sky-50/40 border-b border-sky-100 text-[10px] font-bold tracking-wider text-slate-400 uppercase font-mono">
+              <tr className="bg-muted/50 border-b border-sky-100 text-[10px] font-bold tracking-wider text-muted-foreground uppercase font-mono">
                 <th className="py-2.5 px-4 pl-6 w-[30%]">模型 / 目标框架</th>
                 <th className="py-2.5 px-4 w-[20%]">精度指标</th>
                 <th className="py-2.5 px-4 w-[16%]">状态</th>
@@ -118,17 +118,17 @@ export function TaskTable({
                 <th className="py-2.5 px-2 w-[60px]"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs">
+            <tbody className="divide-y divide-border text-xs">
               {loading && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-slate-400 text-xs">
+                  <td colSpan={5} className="p-8 text-center text-muted-foreground text-xs">
                     加载中...
                   </td>
                 </tr>
               )}
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-slate-400 text-xs">
+                  <td colSpan={5} className="p-8 text-center text-muted-foreground text-xs">
                     无匹配任务
                   </td>
                 </tr>
@@ -141,7 +141,7 @@ export function TaskTable({
                     className="hover:bg-brand-light-bg/40 transition cursor-pointer group"
                   >
                     <td className="py-2.5 px-4 pl-6">
-                      <div className="font-bold text-slate-800 font-mono text-xs">
+                      <div className="font-bold text-foreground font-mono text-xs">
                         {task.model?.name ?? `task_${task.id}`}
                       </div>
                       <div className="flex items-center space-x-1.5 mt-0.5">
@@ -158,27 +158,27 @@ export function TaskTable({
                     <td className="py-2.5 px-4 font-mono">
                       {task.status === 'completed' ? (
                         <>
-                          <div className="text-slate-700 font-semibold">
+                          <div className="text-foreground font-semibold">
                             余弦:{' '}
                             <span className="text-brand-success">
                               {task.comparisons?.[0]?.overallMetrics?.avgCosineSimilarity?.toFixed(4) ?? '—'}
                             </span>
                           </div>
-                          <div className="text-slate-400 text-[11px] mt-0.5">
+                          <div className="text-muted-foreground text-[11px] mt-0.5">
                             最大误差:{' '}
-                            <b className="text-slate-600 font-medium">
+                            <b className="text-muted-foreground font-medium">
                               {task.comparisons?.[0]?.overallMetrics?.maxAbsError?.toFixed(6) ?? '—'}
                             </b>
                           </div>
                         </>
                       ) : (
-                        <span className="text-slate-400/60">—</span>
+                        <span className="text-muted-foreground/60">—</span>
                       )}
                     </td>
                     <td className="p-4">
                       <StatusBadge status={task.status} />
                     </td>
-                    <td className="py-2.5 px-4 text-slate-400 font-mono">
+                    <td className="py-2.5 px-4 text-muted-foreground font-mono">
                       {task.completedAt ?? (task.status === 'running' ? '正在执行...' : task.createdAt ?? '—')}
                     </td>
                     <td className="py-2.5 px-2">
@@ -187,7 +187,7 @@ export function TaskTable({
                           e.stopPropagation()
                           onSelectTask(task)
                         }}
-                        className="text-slate-400 hover:text-brand-accent p-1.5 rounded-lg hover:bg-brand-light-bg/50 transition"
+                        className="text-muted-foreground hover:text-brand-accent p-1.5 rounded-lg hover:bg-brand-light-bg/50 transition"
                         title="查看详情"
                       >
                         <Eye className="h-4 w-4" />
