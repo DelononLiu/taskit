@@ -126,6 +126,27 @@ cd backend && npx drizzle-kit push   # 同步 schema
 cd backend && npx drizzle-kit studio # 可视化管理
 ```
 
+## 配置
+
+通过环境变量配置：
+
+```bash
+# JWT
+JWT_SECRET=your-secret-key
+JWT_EXPIRES_IN=7d
+
+# LDAP（可选，默认关闭）
+LDAP_ENABLED=true
+LDAP_URL=ldap://ldap.corp.com:389
+LDAP_BIND_DN=cn=admin,dc=corp,dc=com
+LDAP_BIND_PASSWORD=admin-password
+LDAP_SEARCH_BASE=ou=users,dc=corp,dc=com
+LDAP_SEARCH_FILTER=(uid={{username}})
+LDAP_EMAIL_DOMAIN=corp.com
+```
+
+LDAP 启用后登录优先走 LDAP，首次登录自动创建本地用户。不配置则使用本地邮箱+密码登录。
+
 ## API
 
 ```
