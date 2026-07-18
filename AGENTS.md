@@ -55,18 +55,30 @@ taskit/
 └── AGENTS.md                      # 本文件
 ```
 
-## 启动
+## 启动 / 重启
 
 ```bash
+# === 启动 ===
 # 后端
 npm run dev:backend     # cd backend && npx tsx src/index.ts
 
-# 前端开发 (Vite 代理 /auth /api 到 :8000)
-npm run dev             # vite --port 5175
+# 前端 (Vite 代理 /auth /api 到 :8000)
+npm run dev             # vite --port 5173
 
 # 同时启动
 npm run dev:all         # bash dev.sh
+
+# === 重启 ===
+# 杀掉占用端口的进程后重新启动
+kill $(lsof -ti:8000) 2>/dev/null; npm run dev:backend &
+kill $(lsof -ti:5173) 2>/dev/null; npm run dev &
+
+# === 停止 ===
+kill $(lsof -ti:8000) $(lsof -ti:5173) 2>/dev/null
 ```
+
+> 修改 `run.sh` 脚本内容不需要重启后端，下次执行任务时自动生效。
+> 新增/删除 `~/.taskit/runner/` 下的目录需要重启后端。
 
 ## 运行测试
 
