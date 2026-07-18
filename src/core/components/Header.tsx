@@ -8,39 +8,23 @@ interface HeaderProps {
 export function Header({ onNewTask }: HeaderProps) {
   return (
     <header className="h-[76px] border-b border-sky-100 bg-white flex items-center justify-between px-8 shrink-0 relative z-50 shadow-[0_4px_20px_rgba(2,132,199,0.03)]">
-      <div className="flex items-center space-x-6">
-        <div className="flex items-center space-x-3">
-          {/* Logo */}
-          <div className="bg-sky-50 text-brand-accent w-10 h-10 rounded-xl flex items-center justify-center border border-sky-200 shadow-sm">
-            <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-              <rect width="32" height="32" rx="6" fill="currentColor" />
-              <path d="M16 6l8 12H8l8-12z" fill="white" />
-              <circle cx="16" cy="22" r="3" fill="white" />
-            </svg>
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-extrabold text-sm tracking-tight text-slate-800">
-                TASK<span className="text-brand-accent">IT</span>
-              </span>
-            </div>
-            <div className="text-[10px] text-brand-accent font-bold tracking-widest uppercase mt-0.5">
-              模型工坊
-            </div>
-          </div>
+      <div className="flex items-center space-x-3">
+        {/* Logo */}
+        <div className="bg-sky-50 text-brand-accent w-10 h-10 rounded-xl flex items-center justify-center border border-sky-200 shadow-sm">
+          <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="6" fill="currentColor" />
+            <path d="M16 6l8 12H8l8-12z" fill="white" />
+            <circle cx="16" cy="22" r="3" fill="white" />
+          </svg>
         </div>
 
-        {/* Status indicators */}
-        <div className="hidden md:flex items-center space-x-4 text-xs">
-          <div className="flex items-center space-x-2 bg-sky-50/60 border border-sky-100 px-2.5 py-1 rounded-lg">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-slate-500 font-medium">后端:</span>
-            <span className="font-mono font-bold text-brand-accent">已连接</span>
-          </div>
-          <div className="flex items-center space-x-2 bg-sky-50/60 border border-sky-100 px-2.5 py-1 rounded-lg">
-            <span className="text-slate-500 font-medium">节点:</span>
-            <span className="font-mono font-bold text-brand-accent">10.128.4.15</span>
-          </div>
+        {/* Brand */}
+        <div className="flex items-baseline gap-1.5">
+          <span className="font-extrabold text-sm tracking-tight text-slate-800">
+            TASK<span className="text-brand-accent">IT</span>
+          </span>
+          <span className="h-3 w-px bg-slate-300" />
+          <span className="text-[11px] text-slate-400 font-medium">模型工坊</span>
         </div>
       </div>
 
