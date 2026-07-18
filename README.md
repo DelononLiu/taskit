@@ -147,6 +147,38 @@ LDAP_EMAIL_DOMAIN=corp.com
 
 LDAP 启用后登录优先走 LDAP，首次登录自动创建本地用户。不配置则使用本地邮箱+密码登录。
 
+## 自定义 Runner
+
+在 `~/.taskit/runner/` 下放任意目录，包含 `run.sh` 即可注册为任务模块，后端启动时自动扫描加载。
+
+```bash
+~/.taskit/runner/
+└── vllm/
+    ├── config.json    # {"name": "vLLM 推理", "icon": "🚀"}
+    └── run.sh         # 入口脚本
+```
+
+`run.sh` 接收标准参数：`--task-dir <目录> --task-id <ID>`，输出 JSON 到 `$TASK_DIR/output.json`。
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+# 解析参数
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --task-dir) TASK_DIR="$2"; shift 2 ;;
+    --task-id)  TASK_ID="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+# 产出结果
+cat > "$TASK_DIR/output.json" << 'EOF'
+{"status": "ok", "data": {}}
+EOF
+```
+
+**重启后端**后新模块出现在侧边栏和模块列表。**修改脚本内容不需要重启**——每次执行时从磁盘重新读取。
+
 ## API
 
 ```
