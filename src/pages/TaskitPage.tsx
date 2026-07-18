@@ -63,11 +63,8 @@ export default function TaskitPage() {
       <div className="flex justify-between items-end px-1">
         <div>
           <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">
-            精度比对 · 任务大盘
+            精度比对
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            神经网络模型精度差异对比任务的集中管理面板
-          </p>
         </div>
         <Button
           onClick={handleNewTask}

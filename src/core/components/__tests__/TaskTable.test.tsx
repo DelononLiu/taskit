@@ -377,7 +377,7 @@ describe('TaskTable', () => {
       )
     })
 
-    it('calls onSelectTask when the "查看详情" button in the action column is clicked', () => {
+    it('calls onSelectTask when the action icon button is clicked', () => {
       const onSelectTask = vi.fn()
       render(
         <TaskTable
@@ -387,8 +387,8 @@ describe('TaskTable', () => {
         />,
       )
 
-      // Click the "查看详情" button for resnet50
-      const detailButtons = screen.getAllByText('查看详情')
+      // Click the action icon button for resnet50
+      const detailButtons = screen.getAllByTitle('查看详情')
       fireEvent.click(detailButtons[0])
 
       expect(onSelectTask).toHaveBeenCalledTimes(1)
@@ -407,7 +407,7 @@ describe('TaskTable', () => {
         />,
       )
 
-      const detailBtn = screen.getByText('查看详情')
+      const detailBtn = screen.getByTitle('查看详情')
       fireEvent.click(detailBtn)
 
       // Should be called exactly once (by the button, not propagated from the row)

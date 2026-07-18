@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react'
+import { Search, Eye } from 'lucide-react'
 import { useState } from 'react'
 import { StatusBadge } from '@/core/components/StatusBadge'
 import { EmptyState } from '@/core/components/EmptyState'
@@ -101,11 +101,11 @@ export function TaskTable({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-sky-50/40 border-b border-sky-100 text-[10px] font-bold tracking-wider text-slate-400 uppercase font-mono">
-                <th className="py-2.5 px-4 pl-6 w-[28%]">模型 / 目标框架</th>
-                <th className="py-2.5 px-4 w-[18%]">精度指标</th>
+                <th className="py-2.5 px-4 pl-6 w-[30%]">模型 / 目标框架</th>
+                <th className="py-2.5 px-4 w-[20%]">精度指标</th>
                 <th className="py-2.5 px-4 w-[16%]">状态</th>
                 <th className="py-2.5 px-4 w-[16%]">完成时间</th>
-                <th className="py-2.5 px-4 pr-6 text-right w-[22%]">操作</th>
+                <th className="py-2.5 px-2 w-[60px]"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
@@ -171,15 +171,16 @@ export function TaskTable({
                     <td className="py-2.5 px-4 text-slate-400 font-mono">
                       {task.completedAt ?? (task.status === 'running' ? '正在执行...' : task.createdAt ?? '—')}
                     </td>
-                    <td className="py-2.5 px-4 pr-6 text-right">
+                    <td className="py-2.5 px-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
                           onSelectTask(task)
                         }}
-                        className="text-slate-500 hover:text-brand-accent font-bold px-3 py-2 rounded-lg border border-slate-200 hover:bg-brand-light-bg/50 transition text-xs"
+                        className="text-slate-400 hover:text-brand-accent p-1.5 rounded-lg hover:bg-brand-light-bg/50 transition"
+                        title="查看详情"
                       >
-                        查看详情
+                        <Eye className="h-4 w-4" />
                       </button>
                     </td>
                   </tr>
