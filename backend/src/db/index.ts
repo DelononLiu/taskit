@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import path from 'path'
 import fs from 'fs'
 
-const dbUrl = process.env.DATABASE_URL || 'file:./dev.db'
+const dbUrl = process.env.DATABASE_URL || 'file:./prisma/dev.db'
 const filePath = path.resolve(dbUrl.replace(/^file:/, ''))
 
 // Ensure directory exists
