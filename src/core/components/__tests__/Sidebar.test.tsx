@@ -16,7 +16,6 @@ describe('Sidebar', () => {
       )
 
       expect(screen.getByText('模型工具')).toBeDefined()
-      expect(screen.getByText('通用')).toBeDefined()
     })
   })
 
@@ -103,43 +102,4 @@ describe('Sidebar', () => {
     })
   })
 
-  // ── 4. General section buttons ───────────────────────────────────
-  describe('general section buttons', () => {
-    it('renders "全部任务记录" button', () => {
-      render(
-        <Sidebar
-          activeModule="model-compare"
-          onModuleChange={vi.fn()}
-        />,
-      )
-
-      expect(screen.getByText('全部任务记录')).toBeDefined()
-    })
-
-    it('renders "导出报告" button', () => {
-      render(
-        <Sidebar
-          activeModule="model-compare"
-          onModuleChange={vi.fn()}
-        />,
-      )
-
-      expect(screen.getByText('导出报告')).toBeDefined()
-    })
-  })
-
-  // ── 5. System info ───────────────────────────────────────────────
-  describe('system info', () => {
-    it('renders "Backend Node" label and IP "10.128.4.15"', () => {
-      render(
-        <Sidebar
-          activeModule="model-compare"
-          onModuleChange={vi.fn()}
-        />,
-      )
-
-      expect(screen.getByText('Backend Node')).toBeDefined()
-      expect(screen.getByText('10.128.4.15')).toBeDefined()
-    })
-  })
 })

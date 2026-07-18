@@ -61,33 +61,6 @@ export function Sidebar({ activeModule, onModuleChange }: SidebarProps) {
           )
         })}
 
-        <div className="h-px bg-slate-100 my-4" />
-
-        <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-3 px-2">
-          通用
-        </div>
-
-        <button
-          className="w-full flex items-center px-3 py-3 rounded-xl text-slate-600 hover:bg-sky-50/50 hover:text-brand-accent font-semibold text-xs transition group"
-        >
-          <span className="mr-3 text-sm">📁</span>
-          <span>全部任务记录</span>
-        </button>
-
-        <button className="w-full flex items-center px-3 py-3 rounded-xl text-slate-600 hover:bg-sky-50/50 hover:text-brand-accent font-semibold text-xs transition group">
-          <span className="mr-3 text-sm">📄</span>
-          <span>导出报告</span>
-        </button>
-      </div>
-
-      {/* System info */}
-      <div className="p-2 bg-sky-50/50 border border-sky-100 rounded-xl">
-        <div className="text-[9px] text-sky-400 font-bold uppercase tracking-wider font-mono">
-          Backend Node
-        </div>
-        <div className="text-[11px] text-brand-accent font-mono font-bold mt-0.5">
-          10.128.4.15
-        </div>
       </div>
     </aside>
   )
