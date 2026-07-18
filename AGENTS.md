@@ -55,30 +55,23 @@ taskit/
 └── AGENTS.md                      # 本文件
 ```
 
-## 启动 / 重启
+## 启动 / 重启 / 停止
 
 ```bash
-# === 启动 ===
-# 后端
-npm run dev:backend     # cd backend && npx tsx src/index.ts
+# 启动
+npm run dev:backend     # 后端 → http://localhost:8000
+npm run dev             # 前端 → http://localhost:5173
+npm run dev:all         # 同时启动
 
-# 前端 (Vite 代理 /auth /api 到 :8000)
-npm run dev             # vite --port 5173
+# 重启
+npm run kill && npm run dev:all
 
-# 同时启动
-npm run dev:all         # bash dev.sh
-
-# === 重启 ===
-# 杀掉占用端口的进程后重新启动
-kill $(lsof -ti:8000) 2>/dev/null; npm run dev:backend &
-kill $(lsof -ti:5173) 2>/dev/null; npm run dev &
-
-# === 停止 ===
-kill $(lsof -ti:8000) $(lsof -ti:5173) 2>/dev/null
+# 停止
+npm run kill
 ```
 
-> 修改 `run.sh` 脚本内容不需要重启后端，下次执行任务时自动生效。
-> 新增/删除 `~/.taskit/runner/` 下的目录需要重启后端。
+> `npm run kill` 会杀全局 vite/tsx 进程——如果本地有多个同类项目，手动 `Ctrl+C` 更安全。
+> 修改 `run.sh` 不需要重启后端；新增/删除 `~/.taskit/runner/` 目录需要。
 
 ## 运行测试
 
