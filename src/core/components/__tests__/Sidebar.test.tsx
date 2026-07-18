@@ -5,21 +5,7 @@ import { Sidebar } from '@/core/components/Sidebar'
 afterEach(cleanup)
 
 describe('Sidebar', () => {
-  // ── 1. Section labels ─────────────────────────────────────────────
-  describe('section labels', () => {
-    it('renders "模型工具" and "通用" section headers', () => {
-      render(
-        <Sidebar
-          activeModule="model-compare"
-          onModuleChange={vi.fn()}
-        />,
-      )
-
-      expect(screen.getByText('模型工具')).toBeDefined()
-    })
-  })
-
-  // ── 2. Module rendering ──────────────────────────────────────────
+  // ── 1. Module rendering ──────────────────────────────────────────
   describe('module rendering', () => {
     it('renders the active module "精度比对" with highlight classes', () => {
       const { container } = render(

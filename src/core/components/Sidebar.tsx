@@ -26,10 +26,6 @@ export function Sidebar({ activeModule, onModuleChange }: SidebarProps) {
   return (
     <aside className="w-60 border-r border-sky-100 bg-white flex flex-col shrink-0 p-4">
       <div className="space-y-1.5 flex-1">
-        <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-3 px-2">
-          模型工具
-        </div>
-
         {MODULES.map((mod) => {
           const isActive = activeModule === mod.id
           const isDisabled = mod.status === 'coming-soon'
