@@ -28,7 +28,7 @@ export function Header({ onNewTask }: HeaderProps) {
               </span>
             </div>
             <div className="text-[10px] text-brand-accent font-bold tracking-widest uppercase mt-0.5">
-              ModelCompare · 部署工坊
+              模型工坊
             </div>
           </div>
         </div>
