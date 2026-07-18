@@ -38,8 +38,6 @@ export function TaskTable({
   // 如果父组件不传过滤器状态，使用本地状态
   const [localStatus, setLocalStatus] = useState('')
   const [localSearch, setLocalSearch] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
   const status = filterStatus ?? localStatus
   const setStatus = onFilterStatusChange ?? setLocalStatus
   const search = searchQuery ?? localSearch
@@ -48,10 +46,15 @@ export function TaskTable({
   const filtered = tasks.filter((t) => {
     if (status && t.status !== status) return false
     if (search && !t.model?.name.toLowerCase().includes(search.toLowerCase())) return false
-    if (startDate && t.createdAt && new Date(t.createdAt) < new Date(startDate)) return false
-    if (endDate && t.createdAt && new Date(t.createdAt) > new Date(endDate + 'T23:59:59')) return false
     return true
   })
+
+  const fmtDate = (d: string | undefined | null) => {
+    if (!d) return '—'
+    const ts = typeof d === 'string' ? Date.parse(d) : d
+    if (!ts || isNaN(+new Date(ts))) return String(d).slice(0, 10)
+    return new Date(ts).toISOString().slice(0, 10)
+  }
 
   if (!loading && tasks.length === 0) {
     return (
@@ -97,23 +100,6 @@ export function TaskTable({
           </select>
         </div>
 
-        {/* 时间过滤 */}
-        <div className="flex items-center gap-1.5 text-xs">
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="bg-muted border border-border rounded-lg px-2.5 py-2 text-xs text-foreground focus:outline-none focus:border-brand-accent transition font-medium"
-          />
-          <span className="text-muted-foreground">—</span>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="bg-muted border border-border rounded-lg px-2.5 py-2 text-xs text-foreground focus:outline-none focus:border-brand-accent transition font-medium"
-          />
-        </div>
-
         {/* 新建按钮 */}
         <Button
           onClick={onNewTask}
@@ -130,24 +116,25 @@ export function TaskTable({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-muted/50 border-b border-sky-100 text-[10px] font-bold tracking-wider text-muted-foreground uppercase font-mono">
-                <th className="py-2.5 px-4 pl-6 w-[30%]">模型 / 目标框架</th>
-                <th className="py-2.5 px-4 w-[20%]">精度指标</th>
-                <th className="py-2.5 px-4 w-[16%]">状态</th>
-                <th className="py-2.5 px-4 w-[16%]">完成时间</th>
-                <th className="py-2.5 px-2 w-[60px]"></th>
+                <th className="py-2.5 px-4 pl-6">模型 / 目标框架</th>
+                <th className="py-2.5 px-4 w-[140px]">精度指标</th>
+                <th className="py-2.5 px-4 w-[90px]">状态</th>
+                <th className="py-2.5 px-4 w-[90px]">开始时间</th>
+                <th className="py-2.5 px-4 w-[90px]">完成时间</th>
+                <th className="py-2.5 px-2 w-[42px]"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border text-xs">
               {loading && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-muted-foreground text-xs">
+                  <td colSpan={6} className="p-8 text-center text-muted-foreground text-xs">
                     加载中...
                   </td>
                 </tr>
               )}
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-muted-foreground text-xs">
+                  <td colSpan={6} className="p-8 text-center text-muted-foreground text-xs">
                     无匹配任务
                   </td>
                 </tr>
@@ -197,8 +184,11 @@ export function TaskTable({
                     <td className="p-4">
                       <StatusBadge status={task.status} />
                     </td>
-                    <td className="py-2.5 px-4 text-muted-foreground font-mono">
-                      {task.completedAt ?? (task.status === 'running' ? '正在执行...' : task.createdAt ?? '—')}
+                    <td className="py-2.5 px-4 text-muted-foreground font-mono text-[11px]">
+                      {fmtDate(task.createdAt)}
+                    </td>
+                    <td className="py-2.5 px-4 text-muted-foreground font-mono text-[11px]">
+                      {task.status === 'running' ? '—' : fmtDate(task.completedAt)}
                     </td>
                     <td className="py-2.5 px-2">
                       <button
