@@ -389,7 +389,7 @@ def main():
                 "inputShape": lb.get("inputShape", []),
                 "outputShape": lb.get("outputShape", []),
                 "metrics": [
-                    {"frameworkId": fb, "cosineSimilarity": 0, "maxAbsError": 0, "passed": False},
+                    {"frameworkId": fb, "cosineSimilarity": 0, "maxAbsError": 0, "meanAbsError": 0, "snr": 0, "passed": False},
                 ],
             }
             merged_layers.append(merged)
@@ -402,7 +402,7 @@ def main():
                     "inputShape": lt.get("inputShape", []),
                     "outputShape": lt.get("outputShape", []),
                     "metrics": [
-                        {"frameworkId": ft, "cosineSimilarity": 0, "maxAbsError": 0, "passed": False},
+                        {"frameworkId": ft, "cosineSimilarity": 0, "maxAbsError": 0, "meanAbsError": 0, "snr": 0, "passed": False},
                     ],
                 })
         graph_out = graph_b
