@@ -282,7 +282,7 @@ export function DrawerTaskDetail({ taskId }: DrawerTaskDetailProps) {
                       err={m.maxAbsError.toExponential(3)}
                     </span>
                     <span className="text-muted-foreground">
-                      SNR={m.snr.toFixed(1)}dB
+                      SNR={m.snr != null ? m.snr.toFixed(1) : '—'}dB
                     </span>
                   </div>
                 </div>
