@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express'
-import { eq, and, desc, count } from 'drizzle-orm'
+import { eq, and, desc, count, inArray } from 'drizzle-orm'
 import { db } from '../db/index.js'
-import { tasks } from '../db/schema.js'
+import { tasks, files } from '../db/schema.js'
 import { getModule } from '../tasks/registry.js'
 import { executeTask, cancelTask } from '../lib/task-engine.js'
 
@@ -17,12 +17,14 @@ router.post('/', async (req: Request, res: Response) => {
     // @ts-ignore
     const userId = req.user?.id ?? 1
 
+    const now = new Date().toISOString()
     const task = db.insert(tasks).values({
       userId,
       module,
       status: 'pending',
       params: JSON.stringify(params ?? {}),
       fileIds: JSON.stringify(fileIds ?? []),
+      createdAt: now,
     }).returning().get()
 
     // 异步执行
@@ -60,15 +62,32 @@ router.get('/', async (req: Request, res: Response) => {
     ])
     const total = totalResult?.count ?? 0
 
+    // 查找任务关联的文件名
+    const allFileIds = taskList.flatMap((t: any) => {
+      try { return JSON.parse(t.fileIds || '[]') } catch { return [] }
+    })
+    const fileMap = allFileIds.length
+      ? Object.fromEntries(
+          db.select({ id: files.id, filename: files.filename }).from(files)
+            .where(inArray(files.id, [...new Set(allFileIds)])).all()
+            .map((f: any) => [f.id, f.filename])
+        )
+      : {}
+
     res.json({
-      tasks: taskList.map((t: any) => ({
-        id: t.id,
-        module: t.module,
-        status: t.status,
-        progress: t.progress,
-        createdAt: t.createdAt,
-        completedAt: t.completedAt ?? null,
-      })),
+      tasks: taskList.map((t: any) => {
+        const ids: string[] = (() => { try { return JSON.parse(t.fileIds || '[]') } catch { return [] } })()
+        return {
+          id: t.id,
+          module: t.module,
+          status: t.status,
+          progress: t.progress,
+          createdAt: t.createdAt === 'CURRENT_TIMESTAMP' ? new Date().toISOString() : t.createdAt,
+          completedAt: t.completedAt ?? null,
+          params: t.params,
+          fileNames: ids.map(id => fileMap[id]).filter(Boolean),
+        }
+      }),
       total,
       page,
       limit,
@@ -142,6 +161,7 @@ router.post('/:id/retry', async (req: Request, res: Response) => {
       status: 'pending',
       params: task.params,
       fileIds: task.fileIds,
+      createdAt: new Date().toISOString(),
     }).returning().get()
 
     executeTask(newTask.id).catch(console.error)

@@ -1,10 +1,14 @@
 import { spawn } from 'child_process'
 import fs from 'fs/promises'
 import path from 'path'
+import { fileURLToPath } from 'url'
 import { eq } from 'drizzle-orm'
 import { db } from '../db/index.js'
 import { tasks, files } from '../db/schema.js'
 import { getModule } from '../tasks/registry.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // 临时目录根
 const TASK_TEMP_DIR = path.resolve('temp')
@@ -43,8 +47,8 @@ export async function executeTask(taskId: number): Promise<void> {
     const mod = getModule(task.module)
     if (!mod) throw new Error(`Unknown module: ${task.module}`)
 
-    // Runner 根目录（相对于项目根）
-    const RUNNERS_ROOT = path.resolve('runners')
+    // Runner 根目录（项目根下的 runners/）
+    const RUNNERS_ROOT = path.resolve(__dirname, '../../../runners')
 
     // 创建临时目录
     taskDir = path.join(TASK_TEMP_DIR, `task_${taskId}`)
@@ -65,6 +69,10 @@ export async function executeTask(taskId: number): Promise<void> {
       // Map camelCase params to --kebab-case CLI args
       if (params.precision) cliArgs.push('--precision', `'${params.precision}'`)
       if (params.batchSize) cliArgs.push('--batch-size', `'${params.batchSize}'`)
+
+      // Detect target framework (non-onnxruntime framework)
+      const targetFw = (params.frameworks ?? []).find((fw: string) => fw !== 'onnxruntime')
+      if (targetFw) cliArgs.push('--target-framework', `'${targetFw}'`)
 
       cmd = `bash ${runnerScript} ${cliArgs.join(' ')}`
     } else if (mod.shell) {

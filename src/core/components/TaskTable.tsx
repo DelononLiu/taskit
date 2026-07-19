@@ -43,7 +43,10 @@ export function TaskTable({
   const search = searchQuery ?? localSearch
   const setSearch = onSearchChange ?? setLocalSearch
 
-  const filtered = tasks.filter((t) => {
+  // 按任务 ID 逆序排列（号大在前）
+  const sorted = [...tasks].sort((a, b) => b.id - a.id)
+
+  const filtered = sorted.filter((t) => {
     if (status && t.status !== status) return false
     if (search && !t.model?.name.toLowerCase().includes(search.toLowerCase())) return false
     return true
@@ -52,8 +55,8 @@ export function TaskTable({
   const fmtDate = (d: string | undefined | null) => {
     if (!d) return '—'
     const ts = typeof d === 'string' ? Date.parse(d) : d
-    if (!ts || isNaN(+new Date(ts))) return String(d).slice(0, 10)
-    return new Date(ts).toISOString().slice(0, 10)
+    if (!ts || isNaN(+new Date(ts))) return String(d).slice(0, 19)
+    return new Date(ts).toISOString().slice(0, 19).replace('T', ' ')
   }
 
   if (!loading && tasks.length === 0) {
@@ -116,15 +119,15 @@ export function TaskTable({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-muted/50 border-b border-sky-100 text-[10px] font-bold tracking-wider text-muted-foreground uppercase font-mono">
-                <th className="py-2.5 px-2 pl-6 w-[40px]">#</th>
-                <th className="py-2.5 px-2">模型</th>
-                <th className="py-2.5 px-2 w-[100px]">基准框架</th>
-                <th className="py-2.5 px-2 w-[130px]">目标框架</th>
-                <th className="py-2.5 px-4 w-[140px]">精度指标</th>
-                <th className="py-2.5 px-4 w-[90px]">状态</th>
-                <th className="py-2.5 px-4 w-[90px]">开始时间</th>
-                <th className="py-2.5 px-4 w-[90px]">完成时间</th>
-                <th className="py-2.5 px-2 w-[42px]"></th>
+                <th className="py-2 px-1.5 pl-3 w-[44px]">任务号</th>
+                <th className="py-2 px-1.5 w-[90px]">模型</th>
+                <th className="py-2 px-1.5 w-[90px]">基准框架</th>
+                <th className="py-2 px-1.5 w-[76px]">目标框架</th>
+                <th className="py-2 px-1 w-[44px]">精度</th>
+                <th className="py-2 px-1 w-[44px]">状态</th>
+                <th className="py-2 px-1.5 w-[80px]">开始时间</th>
+                <th className="py-2 px-1.5 w-[80px]">完成时间</th>
+                <th className="py-2 px-1 w-[28px]"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border text-xs">
@@ -149,20 +152,20 @@ export function TaskTable({
                     onClick={() => onSelectTask(task)}
                     className="hover:bg-brand-light-bg/40 transition cursor-pointer group"
                   >
-                    <td className="py-2.5 px-2 pl-6 text-muted-foreground font-mono text-[11px]">
-                      {i + 1}
+                    <td className="py-2 px-1.5 pl-3 text-muted-foreground font-mono text-[11px]">
+                      {task.id}
                     </td>
-                    <td className="py-2.5 px-2">
+                    <td className="py-2 px-1.5">
                       <div className="font-bold text-foreground font-mono text-xs">
-                        {task.model?.name ?? `task_${task.id}`}
+                        {task.model?.name ?? '—'}
                       </div>
                     </td>
-                    <td className="py-2.5 px-2">
+                    <td className="py-2 px-1.5">
                       <span className="bg-brand-light-bg text-brand-accent font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border border-sky-100">
                         ONNX Runtime
                       </span>
                     </td>
-                    <td className="py-2.5 px-2">
+                    <td className="py-2 px-1.5">
                       <div className="flex items-center gap-1 flex-wrap">
                         {(task.frameworks ?? []).filter((fw: string) => fw !== 'onnxruntime').map((fw: string) => (
                           <span
@@ -174,45 +177,36 @@ export function TaskTable({
                         ))}
                       </div>
                     </td>
-                    <td className="py-2.5 px-4 font-mono">
+                    <td className="py-2 px-1 font-mono">
                       {task.status === 'completed' ? (
-                        <>
-                          <div className="text-foreground font-semibold">
-                            余弦:{' '}
-                            <span className="text-brand-success">
-                              {task.comparisons?.[0]?.overallMetrics?.avgCosineSimilarity?.toFixed(4) ?? '—'}
-                            </span>
-                          </div>
-                          <div className="text-muted-foreground text-[11px] mt-0.5">
-                            最大误差:{' '}
-                            <b className="text-muted-foreground font-medium">
-                              {task.comparisons?.[0]?.overallMetrics?.maxAbsError?.toFixed(6) ?? '—'}
-                            </b>
-                          </div>
-                        </>
+                        <span className="text-brand-success font-semibold">
+                          {task.comparisons?.[0]?.overallMetrics?.avgCosineSimilarity != null
+                            ? (task.comparisons[0].overallMetrics.avgCosineSimilarity * 100).toFixed(2) + '%'
+                            : '—'}
+                        </span>
                       ) : (
                         <span className="text-muted-foreground/60">—</span>
                       )}
                     </td>
-                    <td className="p-4">
+                    <td className="px-1 py-2">
                       <StatusBadge status={task.status} />
                     </td>
-                    <td className="py-2.5 px-4 text-muted-foreground font-mono text-[11px]">
+                    <td className="py-2 px-1.5 text-muted-foreground font-mono text-[11px]">
                       {fmtDate(task.createdAt)}
                     </td>
-                    <td className="py-2.5 px-4 text-muted-foreground font-mono text-[11px]">
+                    <td className="py-2 px-1.5 text-muted-foreground font-mono text-[11px]">
                       {task.status === 'running' ? '—' : fmtDate(task.completedAt)}
                     </td>
-                    <td className="py-2.5 px-2">
+                    <td className="py-2 px-1">
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
                           onSelectTask(task)
                         }}
-                        className="text-muted-foreground hover:text-brand-accent p-1.5 rounded-lg hover:bg-brand-light-bg/50 transition"
+                        className="text-muted-foreground hover:text-brand-accent p-1 rounded-lg hover:bg-brand-light-bg/50 transition"
                         title="查看详情"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-3.5 w-3.5" />
                       </button>
                     </td>
                   </tr>

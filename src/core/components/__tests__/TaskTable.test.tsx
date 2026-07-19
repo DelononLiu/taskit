@@ -188,8 +188,7 @@ describe('TaskTable', () => {
       )
 
       // Completed task resnet50 has metrics
-      expect(screen.getByText('0.9987')).toBeDefined()
-      expect(screen.getByText('0.000123')).toBeDefined()
+      expect(screen.getByText('99.87%')).toBeDefined()
     })
 
     it('renders "—" for non-completed tasks in metrics column', () => {
@@ -389,8 +388,9 @@ describe('TaskTable', () => {
       )
 
       // Click the action icon button for resnet50
-      const detailButtons = screen.getAllByTitle('查看详情')
-      fireEvent.click(detailButtons[0])
+      const resnetRow = screen.getByText('resnet50').closest('tr')!
+      const detailBtn = resnetRow.querySelector('button[title="查看详情"]')!
+      fireEvent.click(detailBtn)
 
       expect(onSelectTask).toHaveBeenCalledTimes(1)
       expect(onSelectTask).toHaveBeenCalledWith(

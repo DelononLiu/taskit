@@ -13,6 +13,7 @@ import json
 import math
 import os
 import copy
+import importlib.util
 import numpy as np
 import onnx
 from onnx import helper, TensorProto
@@ -151,6 +152,7 @@ def extract_graph(model, sampled_nodes, model_output_names):
 
 def run_inference(model_path, batch_size=1):
     """Load ONNX model, run inference, return (meta_list, arrays_dict, graph_data)."""
+    np.random.seed(42)
     model = onnx.load(model_path)
 
     input_meta = {i.name: i for i in model.graph.input}
@@ -326,6 +328,8 @@ def main():
                         choices=["fp32", "fp16", "int8"])
     parser.add_argument("--batch-size", type=int, default=1,
                         help="Batch size")
+    parser.add_argument("--target-framework", default="",
+                        help="Compare ONNX Runtime (baseline) vs target framework (e.g. openvino)")
     args = parser.parse_args()
 
     model_paths = [p.strip() for p in args.input.split(",")]
@@ -336,21 +340,108 @@ def main():
     print(f"[onnx] precision: {args.precision}, batch-size: {args.batch_size}")
 
     # Run inference on each model
-    all_results = []
+    baseline_results = []  # (meta, tensors, graph)
     for mp in model_paths:
         print(f"[onnx] running inference: {mp}")
         meta, tensors, graph = run_inference(mp, args.batch_size)
-        all_results.append((mp, meta, tensors, graph))
+        baseline_results.append((meta, tensors, graph))
 
-    if len(all_results) == 1:
-        # Single model: output metadata only (no comparison)
-        mp, meta, tensors, graph = all_results[0]
+    # Run target framework if specified (single model + target framework = compare)
+    target_meta_extra = None
+    if args.target_framework and len(model_paths) == 1:
+        target_fw = args.target_framework.lower()
+        print(f"[onnx] comparing with target framework: {target_fw}")
+        runner_map = {
+            'openvino': os.path.join(os.path.dirname(__file__), '..', 'openvino', 'run.sh'),
+        }
+        runner_sh = runner_map.get(target_fw)
+        if runner_sh and os.path.exists(runner_sh):
+            import subprocess, tempfile
+            with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as tmp:
+                tmp_out = tmp.name
+            try:
+                cmd = f'bash {runner_sh} --input {model_paths[0]} --output {tmp_out}'
+                ret = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=120)
+                if ret.returncode == 0 and os.path.exists(tmp_out):
+                    with open(tmp_out) as f:
+                        fw_data = json.load(f)
+                    target_meta_extra = fw_data.get('layers', [])
+                else:
+                    print(f"[onnx] {target_fw} runner failed: {ret.stderr[:200]}")
+            finally:
+                if os.path.exists(tmp_out):
+                    os.unlink(tmp_out)
+        # Add more target frameworks here (tensorrt, etc.)
+
+    has_baseline = len(baseline_results) > 0
+    meta_b, tensors_b, graph_b = baseline_results[0]
+
+    if target_meta_extra is not None:
+        # Include both frameworks' layers in output (structural comparison)
+        fb = 'onnxruntime'
+        ft = args.target_framework
+        merged_layers = []
+        for lb in meta_b:
+            # Find matching layer in target by index
+            merged = {
+                "layerName": lb["layerName"],
+                "layerType": lb["layerType"],
+                "inputShape": lb.get("inputShape", []),
+                "outputShape": lb.get("outputShape", []),
+                "metrics": [
+                    {"frameworkId": fb, "cosineSimilarity": 0, "maxAbsError": 0, "passed": False},
+                ],
+            }
+            merged_layers.append(merged)
+        # Also include target-only layers
+        for lt in target_meta_extra:
+            if not any(m["layerName"] == lt["layerName"] for m in merged_layers):
+                merged_layers.append({
+                    "layerName": lt["layerName"],
+                    "layerType": lt.get("layerType", ""),
+                    "inputShape": lt.get("inputShape", []),
+                    "outputShape": lt.get("outputShape", []),
+                    "metrics": [
+                        {"frameworkId": ft, "cosineSimilarity": 0, "maxAbsError": 0, "passed": False},
+                    ],
+                })
+        graph_out = graph_b
+        if not graph_out and baseline_results[0][2]:
+            graph_out = baseline_results[0][2]
+        output = {
+            "status": "ok",
+            "framework": f"onnx_vs_{ft}",
+            "model": os.path.basename(model_paths[0]),
+            "overall": {
+                "totalLayers": len(merged_layers),
+                "passedLayers": 0,
+                "failedLayers": 0,
+                "avgCosineSimilarity": 0,
+                "maxAbsError": 0,
+                "worstLayer": "",
+            },
+            "layers": merged_layers,
+        }
+        if graph_out:
+            output["graph"] = graph_out
+    elif len(baseline_results) >= 2:
+        # Two models: compare
+        _, _, graph_b = baseline_results[0]
+        meta_t, tensors_t, _ = baseline_results[1]
+        framework_id = f"onnx_{args.precision}"
+        result = compare_layers(meta_b, tensors_b, meta_t, tensors_t, framework_id)
+        output = {"status": "ok", "framework": "onnx",
+                  "model": os.path.basename(model_paths[0]), **result}
+        if graph_b:
+            output["graph"] = graph_b
+    else:
+        # Single model, no comparison: metadata only
         output = {
             "status": "ok",
             "framework": "onnx",
-            "model": os.path.basename(mp),
+            "model": os.path.basename(model_paths[0]),
             "overall": {
-                "totalLayers": len(meta),
+                "totalLayers": len(meta_b),
                 "passedLayers": 0,
                 "failedLayers": 0,
                 "avgCosineSimilarity": 0,
@@ -363,21 +454,7 @@ def main():
                 "inputShape": l["inputShape"],
                 "outputShape": l["outputShape"],
                 "metrics": [],
-            } for l in meta],
-        }
-        if graph:
-            output["graph"] = graph
-    else:
-        # Two models: compare
-        _, meta_b, tensors_b, graph_b = all_results[0]
-        _, meta_t, tensors_t, _ = all_results[1]
-        framework_id = f"onnx_{args.precision}"
-        result = compare_layers(meta_b, tensors_b, meta_t, tensors_t, framework_id)
-        output = {
-            "status": "ok",
-            "framework": "onnx",
-            "model": os.path.basename(model_paths[0]),
-            **result,
+            } for l in meta_b],
         }
         if graph_b:
             output["graph"] = graph_b

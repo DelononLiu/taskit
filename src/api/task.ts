@@ -52,7 +52,7 @@ export async function getTask(taskId: number): Promise<ComparisonTask> {
     frameworks: resp.params?.frameworks || [],
     status: resp.status,
     progress: resp.progress,
-    createdAt: resp.createdAt,
+    createdAt: resp.createdAt === 'CURRENT_TIMESTAMP' ? new Date().toISOString() : resp.createdAt,
     completedAt: resp.completedAt,
     error: resp.error,
     baseline: null,
@@ -88,10 +88,17 @@ export async function getTaskHistory(page = 1, limit = 20): Promise<any[]> {
     const dateStr = typeof t.createdAt === 'number'
       ? new Date(t.createdAt).toISOString()
       : t.createdAt ?? ''
+    let frameworks: string[] = [t.module]
+    if (t.params) {
+      try {
+        const p = typeof t.params === 'string' ? JSON.parse(t.params) : t.params
+        if (Array.isArray(p.frameworks)) frameworks = p.frameworks
+      } catch {}
+    }
     return {
       id: t.id,
-      model: { name: `任务 #${t.id}`, size: 0 },
-      frameworks: [t.module],
+      model: { name: (t.fileNames?.[0] || '').replace(/\.[^.]+$/, '') || `任务 #${t.id}`, size: 0 },
+      frameworks,
       status: t.status,
       progress: t.progress,
       createdAt: dateStr,

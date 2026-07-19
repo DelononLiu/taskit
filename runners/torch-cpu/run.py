@@ -11,7 +11,9 @@ import argparse
 import json
 import math
 import os
+import importlib.util
 import numpy as np
+import torch
 
 
 def cosine_similarity(a, b):
@@ -43,35 +45,101 @@ def compute_snr(a, b):
     return float(10 * math.log10(signal / noise))
 
 
-def run_inference(model_path, batch_size=1, precision='fp32'):
-    """Load and run a PyTorch model, return layer info and tensor values."""
-    import torch
+def _load_model(model_path, model_script=None):
+    """Load a PyTorch model from file.
 
-    try:
-        model = torch.load(model_path, map_location='cpu', weights_only=False)
-    except Exception:
-        try:
-            import torchvision
-            model = torchvision.models.resnet18(weights=None)
-            model.eval()
-            print(f"[torch] loaded torchvision model as fallback")
-        except ImportError:
-            class DummyModel(torch.nn.Module):
-                def __init__(self):
-                    super().__init__()
-                    self.fc = torch.nn.Linear(224*224*3, 10)
-                def forward(self, x):
-                    return self.fc(x.view(x.size(0), -1))
-            model = DummyModel()
-            model.eval()
-            print(f"[torch] created dummy model (no model at {model_path})")
+    Supports:
+    - Full model saved with ``torch.save(model, path)``
+    - State dict, when ``model_script`` points to a Python file with a Model class
+    """
+
+    raw = torch.load(model_path, map_location='cpu', weights_only=False)
+
+    if isinstance(raw, dict):
+        # State dict — need model architecture
+        if model_script and os.path.isfile(model_script):
+            import ast
+
+            # Try importing the module normally
+            ModelClass = None
+            try:
+                spec = importlib.util.spec_from_file_location("model_mod", model_script)
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                for name in dir(mod):
+                    obj = getattr(mod, name)
+                    if isinstance(obj, type) and issubclass(obj, torch.nn.Module) and obj is not torch.nn.Module:
+                        ModelClass = obj
+                        break
+            except ModuleNotFoundError:
+                pass
+
+            # Fallback: parse AST to extract model class without running imports
+            if ModelClass is None:
+                with open(model_script) as f:
+                    tree = ast.parse(f.read())
+                class_node = None
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.ClassDef):
+                        for base in node.bases:
+                            base_name = ast.unparse(base)
+                            if 'Module' in base_name:
+                                class_node = node
+                                break
+                if class_node is None:
+                    raise RuntimeError(f"No torch.nn.Module subclass found in {model_script}")
+                # Reconstruct class code and exec with torch in namespace
+                body_lines = []
+                for node in class_node.body:
+                    body_lines.append(ast.unparse(node))
+                class_code = f"class {class_node.name}(torch.nn.Module):\n"
+                for line in body_lines:
+                    class_code += f"  {line}\n"
+                namespace = {'torch': torch, 'nn': torch.nn, 'F': torch.nn.functional}
+                exec(compile(ast.parse(class_code), model_script, 'exec'), namespace)
+                ModelClass = namespace[class_node.name]
+
+            model = ModelClass()
+            model.load_state_dict(raw)
+            print(f"[torch] loaded state_dict into {ModelClass.__name__} from {model_script}")
+        else:
+            raise RuntimeError(
+                "Model file is a state_dict. Provide --model-script with the model definition file."
+            )
+    else:
+        model = raw
 
     model.eval()
+    return model
+
+
+def _guess_input_shape(model, default_size=32):
+    """Detect input channels from first conv layer; fall back to 3."""
+    in_channels = 3
+    for m in model.modules():
+        if isinstance(m, (torch.nn.Conv1d, torch.nn.Conv2d, torch.nn.Conv3d)):
+            in_channels = m.in_channels
+            break
+    return in_channels, default_size, default_size
+
+
+def run_inference(model_path, batch_size=1, precision='fp32', model_script=None, input_shape=None, export_onnx=None):
+    """Load and run a PyTorch model, return layer info and tensor values.
+
+    If ``export_onnx`` is a file path, exports the model to ONNX after inference.
+    """
+    np.random.seed(42)
+    torch.manual_seed(42)
+    model = _load_model(model_path, model_script)
+
     if precision == 'fp16':
         model = model.half()
 
-    # Generate random input
-    dummy_input = torch.randn(batch_size, 3, 224, 224)
+    if input_shape:
+        c, h, w = input_shape
+    else:
+        c, h, w = _guess_input_shape(model)
+    dummy_input = torch.randn(batch_size, c, h, w)
     if precision == 'fp16':
         dummy_input = dummy_input.half()
 
@@ -93,6 +161,21 @@ def run_inference(model_path, batch_size=1, precision='fp32'):
 
     for h in hooks:
         h.remove()
+
+    # Export to ONNX if requested
+    if export_onnx:
+        torch.onnx.export(
+            model,
+            dummy_input,
+            export_onnx,
+            input_names=["input"],
+            output_names=["output"],
+            dynamic_axes={"input": {0: "batch"}, "output": {0: "batch"}},
+            opset_version=18,
+            do_constant_folding=True,
+            external_data=False,
+        )
+        print(f"[torch] exported ONNX → {export_onnx}")
 
     # Build layer list
     meta_list = []
@@ -164,13 +247,27 @@ def main():
     parser.add_argument("--node-output", default="")
     parser.add_argument("--precision", default="fp32", choices=["fp32", "fp16"])
     parser.add_argument("--batch-size", type=int, default=1)
+    parser.add_argument("--model-script", default="",
+                        help="Path to .py file with model class (required for state_dict)")
+    parser.add_argument("--input-shape", default="",
+                        help="Input shape as CxHxW, e.g. 1x28x28 (auto-detected if omitted)")
+    parser.add_argument("--export-onnx", default="",
+                        help="Export model to ONNX at this path after inference")
     args = parser.parse_args()
+
+    input_shape = None
+    if args.input_shape:
+        parts = [int(x) for x in args.input_shape.split("x")]
+        if len(parts) == 3:
+            input_shape = tuple(parts)
 
     model_paths = [p.strip() for p in args.input.split(",")]
 
     all_results = []
     for mp in model_paths:
-        meta, arrays = run_inference(mp, args.batch_size, args.precision)
+        meta, arrays = run_inference(mp, args.batch_size, args.precision,
+                                     args.model_script or None, input_shape,
+                                     args.export_onnx or None)
         all_results.append((mp, meta, arrays))
 
     if len(all_results) == 1:
