@@ -1,22 +1,13 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Header } from '@/core/components/Header'
 import { Sidebar } from '@/core/components/Sidebar'
-import { DetailDrawer } from '@/core/components/DetailDrawer'
 import { useAppStore } from '@/stores/appStore'
 import { AuthPage } from '@/core/components/AuthPage'
 import { AuthGuard } from '@/core/components/AuthGuard'
 import TaskitPage from '@/pages/TaskitPage'
-import { DrawerTaskForm } from '@/tasks/model_compare/DrawerTaskForm'
-import { DrawerTaskDetail } from '@/tasks/model_compare/DrawerTaskDetail'
 
 function AppLayout() {
-  const { activeModule, setActiveModule, drawerMode, drawerTaskId, drawerTitle, openDrawer, closeDrawer } = useAppStore()
-  const navigate = useNavigate()
-
-  const handleCloseDrawer = () => {
-    closeDrawer()
-    navigate('/', { replace: true })
-  }
+  const { activeModule, setActiveModule } = useAppStore()
 
   return (
     <div className="h-screen flex flex-col bg-muted/30">
@@ -29,20 +20,6 @@ function AppLayout() {
           <TaskitPage />
         </main>
       </div>
-
-      <DetailDrawer
-        open={drawerMode !== 'closed'}
-        mode={drawerMode}
-        title={drawerTitle}
-        onClose={handleCloseDrawer}
-      >
-        {drawerMode === 'new-task' && (
-          <DrawerTaskForm onSuccess={() => { closeDrawer() }} />
-        )}
-        {drawerMode === 'task-detail' && drawerTaskId != null && (
-          <DrawerTaskDetail taskId={drawerTaskId} />
-        )}
-      </DetailDrawer>
     </div>
   )
 }

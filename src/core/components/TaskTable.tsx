@@ -1,4 +1,4 @@
-import { Search, Eye, Plus } from 'lucide-react'
+import { Search, Download, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/core/components/StatusBadge'
@@ -8,8 +8,8 @@ import type { ComparisonTask } from '@/types'
 interface TaskTableProps {
   tasks: ComparisonTask[]
   loading?: boolean
-  onSelectTask: (task: ComparisonTask) => void
   onNewTask: () => void
+  onDownloadReport: (taskId: number) => void
   /** 过滤器状态（由父组件控制或本地控制） */
   filterStatus?: string
   onFilterStatusChange?: (v: string) => void
@@ -28,8 +28,8 @@ const STATUS_OPTIONS = [
 export function TaskTable({
   tasks,
   loading,
-  onSelectTask,
   onNewTask,
+  onDownloadReport,
   filterStatus,
   onFilterStatusChange,
   searchQuery,
@@ -123,7 +123,8 @@ export function TaskTable({
                 <th className="py-2 px-1.5 w-[90px]">模型</th>
                 <th className="py-2 px-1.5 w-[90px]">基准框架</th>
                 <th className="py-2 px-1.5 w-[76px]">目标框架</th>
-                <th className="py-2 px-1 w-[44px]">精度</th>
+                <th className="py-2 px-1 w-[44px]">通过/总计</th>
+                <th className="py-2 px-1 w-[44px]">余弦</th>
                 <th className="py-2 px-1 w-[44px]">状态</th>
                 <th className="py-2 px-1.5 w-[80px]">开始时间</th>
                 <th className="py-2 px-1.5 w-[80px]">完成时间</th>
@@ -133,14 +134,14 @@ export function TaskTable({
             <tbody className="divide-y divide-border text-xs">
               {loading && (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-muted-foreground text-xs">
+                  <td colSpan={10} className="p-8 text-center text-muted-foreground text-xs">
                     加载中...
                   </td>
                 </tr>
               )}
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-muted-foreground text-xs">
+                  <td colSpan={10} className="p-8 text-center text-muted-foreground text-xs">
                     无匹配任务
                   </td>
                 </tr>
@@ -149,8 +150,7 @@ export function TaskTable({
                 filtered.map((task, i) => (
                   <tr
                     key={task.id}
-                    onClick={() => onSelectTask(task)}
-                    className="hover:bg-brand-light-bg/40 transition cursor-pointer group"
+                    className="hover:bg-brand-light-bg/40 transition group"
                   >
                     <td className="py-2 px-1.5 pl-3 text-muted-foreground font-mono text-[11px]">
                       {task.id}
@@ -178,11 +178,18 @@ export function TaskTable({
                       </div>
                     </td>
                     <td className="py-2 px-1 font-mono">
-                      {task.status === 'completed' ? (
-                        <span className="text-brand-success font-semibold">
-                          {task.comparisons?.[0]?.overallMetrics?.avgCosineSimilarity != null
-                            ? (task.comparisons[0].overallMetrics.avgCosineSimilarity * 100).toFixed(2) + '%'
-                            : '—'}
+                      {task.status === 'completed' && task.overall ? (
+                        <span className="text-brand-success font-semibold text-[11px]">
+                          {task.overall.passedLayers}/{task.overall.totalLayers}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/60">—</span>
+                      )}
+                    </td>
+                    <td className="py-2 px-1 font-mono">
+                      {task.status === 'completed' && task.overall ? (
+                        <span className="text-foreground font-semibold text-[11px]">
+                          {task.overall.avgCosineSimilarity.toFixed(4)}
                         </span>
                       ) : (
                         <span className="text-muted-foreground/60">—</span>
@@ -198,16 +205,20 @@ export function TaskTable({
                       {task.status === 'running' ? '—' : fmtDate(task.completedAt)}
                     </td>
                     <td className="py-2 px-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onSelectTask(task)
-                        }}
-                        className="text-muted-foreground hover:text-brand-accent p-1 rounded-lg hover:bg-brand-light-bg/50 transition"
-                        title="查看详情"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        {task.status === 'completed' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onDownloadReport(task.id)
+                            }}
+                            className="text-muted-foreground hover:text-brand-accent p-1 rounded-lg hover:bg-brand-light-bg/50 transition"
+                            title="下载报告"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

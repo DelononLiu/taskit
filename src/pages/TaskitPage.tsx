@@ -1,18 +1,16 @@
-import { useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { TaskTable } from '@/core/components/TaskTable'
 import { EmptyState } from '@/core/components/EmptyState'
+import { TaskFormModal } from '@/tasks/model_compare/TaskFormModal'
 import { useAppStore } from '@/stores/appStore'
 import { useTaskStore } from '@/stores/taskStore'
-import type { ComparisonTask } from '@/types'
 
 export default function TaskitPage() {
-  const { id: idStr } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const activeModule = useAppStore((s) => s.activeModule)
-  const drawerMode = useAppStore((s) => s.drawerMode)
-  const { tasks, tasksLoading, fetchTasks, fetchTask } = useTaskStore()
-  const openDrawer = useAppStore((s) => s.openDrawer)
+  const { tasks, tasksLoading, fetchTasks } = useTaskStore()
+  const [modalOpen, setModalOpen] = useState(false)
 
   // 初始加载任务列表
   useEffect(() => {
@@ -20,20 +18,6 @@ export default function TaskitPage() {
       fetchTasks()
     }
   }, [activeModule])
-
-  // 如果 URL 有 /tasks/:id，打开详情 drawer
-  useEffect(() => {
-    if (idStr && drawerMode === 'closed' && activeModule === 'model-compare') {
-      const id = parseInt(idStr)
-      if (!isNaN(id)) {
-        fetchTask(id).then((task) => {
-          if (task) {
-            openDrawer('task-detail', task.id, task.model?.name ?? `任务 #${task.id}`)
-          }
-        })
-      }
-    }
-  }, [idStr, activeModule, drawerMode, fetchTask, openDrawer])
 
   // DeployAgent 预留空态
   if (activeModule === 'deploy-agent') {
@@ -46,22 +30,33 @@ export default function TaskitPage() {
     )
   }
 
-  const handleSelectTask = (task: ComparisonTask) => {
-    openDrawer('task-detail', task.id, task.model?.name ?? `任务 #${task.id}`)
-    navigate(`/tasks/${task.id}`, { replace: true })
-  }
-
-  const handleNewTask = () => {
-    openDrawer('new-task', undefined, '新建精度比对任务')
-    navigate('/', { replace: true })
+  const handleDownloadReport = async (taskId: number) => {
+    const token = localStorage.getItem('token') || ''
+    const resp = await fetch(`/api/tasks/${taskId}/report`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!resp.ok) return
+    const blob = await resp.blob()
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
   }
 
   return (
-    <TaskTable
-      tasks={tasks}
-      loading={tasksLoading}
-      onSelectTask={handleSelectTask}
-      onNewTask={handleNewTask}
-    />
+    <>
+      <TaskTable
+        tasks={tasks}
+        loading={tasksLoading}
+        onNewTask={() => setModalOpen(true)}
+        onDownloadReport={handleDownloadReport}
+      />
+      <TaskFormModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSuccess={() => {
+          setModalOpen(false)
+          fetchTasks()
+        }}
+      />
+    </>
   )
 }

@@ -41,6 +41,14 @@ const mockTasks: ComparisonTask[] = [
         },
       },
     ],
+    overall: {
+      totalLayers: 50,
+      passedLayers: 48,
+      failedLayers: 2,
+      avgCosineSimilarity: 0.9987,
+      maxAbsError: 0.000123,
+      worstLayer: 'conv1',
+    },
   }),
   createTask({
     id: 2,
@@ -69,12 +77,12 @@ describe('TaskTable', () => {
   describe('empty state', () => {
     it('renders EmptyState with title, description and action button when there are no tasks', () => {
       const onNewTask = vi.fn()
-      const onSelectTask = vi.fn()
+      const onDownloadReport = vi.fn()
       render(
         <TaskTable
           tasks={[]}
-          onSelectTask={onSelectTask}
           onNewTask={onNewTask}
+          onDownloadReport={onDownloadReport}
         />,
       )
 
@@ -98,8 +106,8 @@ describe('TaskTable', () => {
         <TaskTable
           tasks={[]}
           loading={true}
-          onSelectTask={vi.fn()}
           onNewTask={vi.fn()}
+          onDownloadReport={vi.fn()}
         />,
       )
 
@@ -116,8 +124,8 @@ describe('TaskTable', () => {
         <TaskTable
           tasks={mockTasks}
           loading={true}
-          onSelectTask={vi.fn()}
           onNewTask={vi.fn()}
+          onDownloadReport={vi.fn()}
         />,
       )
 
@@ -136,8 +144,8 @@ describe('TaskTable', () => {
         <TaskTable
           tasks={mockTasks}
           filterStatus="cancelled"
-          onSelectTask={vi.fn()}
           onNewTask={vi.fn()}
+          onDownloadReport={vi.fn()}
         />,
       )
 
@@ -151,8 +159,8 @@ describe('TaskTable', () => {
       render(
         <TaskTable
           tasks={mockTasks}
-          onSelectTask={vi.fn()}
           onNewTask={vi.fn()}
+          onDownloadReport={vi.fn()}
         />,
       )
 
@@ -178,33 +186,33 @@ describe('TaskTable', () => {
       expect(screen.getAllByText('PENDING').length).toBe(2)
     })
 
-    it('renders accuracy metrics for completed tasks', () => {
+    it('renders passed/total and cosine accuracy for completed tasks', () => {
       render(
         <TaskTable
           tasks={mockTasks}
-          onSelectTask={vi.fn()}
           onNewTask={vi.fn()}
+          onDownloadReport={vi.fn()}
         />,
       )
 
-      // Completed task resnet50 has metrics
-      expect(screen.getByText('99.87%')).toBeDefined()
+      // Completed task resnet50 has passed/total and cosine
+      expect(screen.getByText('48/50')).toBeDefined()
+      expect(screen.getByText('0.9987')).toBeDefined()
     })
 
-    it('renders "—" for non-completed tasks in metrics column', () => {
+    it('renders "—" for non-completed tasks in accuracy columns', () => {
       render(
         <TaskTable
           tasks={mockTasks}
-          onSelectTask={vi.fn()}
           onNewTask={vi.fn()}
+          onDownloadReport={vi.fn()}
         />,
       )
 
-      // Find all — indicators (one per non-completed task row in metrics column)
-      // bert-base (running), yolov8 (failed), gpt2 (pending) each have a — in the metrics cell
+      // Find all — indicators (one per column for non-completed tasks)
       const dashes = screen.getAllByText('—')
-      // There should be at least 3 (one per non-completed task in the metrics column)
-      expect(dashes.length).toBeGreaterThanOrEqual(3)
+      // bert-base (running), yolov8 (failed), gpt2 (pending) each have — in passed/total and cosine columns = 6
+      expect(dashes.length).toBeGreaterThanOrEqual(6)
     })
   })
 
@@ -217,8 +225,8 @@ describe('TaskTable', () => {
           tasks={mockTasks}
           filterStatus=""
           onFilterStatusChange={onFilterChange}
-          onSelectTask={vi.fn()}
           onNewTask={vi.fn()}
+          onDownloadReport={vi.fn()}
         />,
       )
 
@@ -237,8 +245,8 @@ describe('TaskTable', () => {
           tasks={mockTasks}
           filterStatus="completed"
           onFilterStatusChange={onFilterChange}
-          onSelectTask={vi.fn()}
           onNewTask={vi.fn()}
+          onDownloadReport={vi.fn()}
         />,
       )
 
@@ -253,8 +261,8 @@ describe('TaskTable', () => {
       render(
         <TaskTable
           tasks={mockTasks}
-          onSelectTask={vi.fn()}
           onNewTask={vi.fn()}
+          onDownloadReport={vi.fn()}
         />,
       )
 
@@ -283,8 +291,8 @@ describe('TaskTable', () => {
           tasks={mockTasks}
           searchQuery=""
           onSearchChange={onSearchChange}
-          onSelectTask={vi.fn()}
           onNewTask={vi.fn()}
+          onDownloadReport={vi.fn()}
         />,
       )
 
@@ -302,8 +310,8 @@ describe('TaskTable', () => {
           tasks={mockTasks}
           searchQuery="bert"
           onSearchChange={onSearchChange}
-          onSelectTask={vi.fn()}
           onNewTask={vi.fn()}
+          onDownloadReport={vi.fn()}
         />,
       )
 
@@ -318,8 +326,8 @@ describe('TaskTable', () => {
       render(
         <TaskTable
           tasks={mockTasks}
-          onSelectTask={vi.fn()}
           onNewTask={vi.fn()}
+          onDownloadReport={vi.fn()}
         />,
       )
 
@@ -342,8 +350,8 @@ describe('TaskTable', () => {
       render(
         <TaskTable
           tasks={mockTasks}
-          onSelectTask={vi.fn()}
           onNewTask={vi.fn()}
+          onDownloadReport={vi.fn()}
         />,
       )
 
@@ -355,64 +363,36 @@ describe('TaskTable', () => {
     })
   })
 
-  // ── 7. Row click ──────────────────────────────────────────────────
-  describe('row click', () => {
-    it('calls onSelectTask with the task when a row body is clicked', () => {
-      const onSelectTask = vi.fn()
+  // ── 7. Download button ──────────────────────────────────────────
+  describe('download button', () => {
+    it('calls onDownloadReport with task id when download button is clicked', () => {
+      const onDownloadReport = vi.fn()
       render(
         <TaskTable
           tasks={mockTasks}
-          onSelectTask={onSelectTask}
           onNewTask={vi.fn()}
+          onDownloadReport={onDownloadReport}
         />,
       )
 
-      // Click on the resnet50 row — use a cell that isn't the action button
-      const row = screen.getByText('resnet50').closest('tr')!
-      fireEvent.click(row)
+      // Click the download button for resnet50 (only completed task has a download button)
+      const downloadBtn = screen.getByTitle('下载报告')
+      fireEvent.click(downloadBtn)
 
-      expect(onSelectTask).toHaveBeenCalledTimes(1)
-      expect(onSelectTask).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 1, model: expect.objectContaining({ name: 'resnet50' }) }),
-      )
+      expect(onDownloadReport).toHaveBeenCalledTimes(1)
+      expect(onDownloadReport).toHaveBeenCalledWith(1)
     })
 
-    it('calls onSelectTask when the action icon button is clicked', () => {
-      const onSelectTask = vi.fn()
+    it('does not show download button for non-completed tasks', () => {
       render(
         <TaskTable
-          tasks={mockTasks}
-          onSelectTask={onSelectTask}
+          tasks={[mockTasks[1]]} // bert-base (running)
           onNewTask={vi.fn()}
+          onDownloadReport={vi.fn()}
         />,
       )
 
-      // Click the action icon button for resnet50
-      const resnetRow = screen.getByText('resnet50').closest('tr')!
-      const detailBtn = resnetRow.querySelector('button[title="查看详情"]')!
-      fireEvent.click(detailBtn)
-
-      expect(onSelectTask).toHaveBeenCalledTimes(1)
-      expect(onSelectTask).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 1 }),
-      )
-    })
-
-    it('does not propagate row click when action button is clicked', () => {
-      const onSelectTask = vi.fn()
-      render(
-        <TaskTable
-          tasks={[mockTasks[0]]}
-          onSelectTask={onSelectTask}
-          onNewTask={vi.fn()}
-        />,
-      )
-
-      const detailBtn = screen.getByTitle('查看详情')
-      fireEvent.click(detailBtn)
-
-      // Should be called exactly once (by the button, not propagated from the row)
-      expect(onSelectTask).toHaveBeenCalledTimes(1)
+      expect(screen.queryByTitle('下载报告')).toBeNull()
     })
   })
 
@@ -423,8 +403,8 @@ describe('TaskTable', () => {
       render(
         <TaskTable
           tasks={[]}
-          onSelectTask={vi.fn()}
           onNewTask={onNewTask}
+          onDownloadReport={vi.fn()}
         />,
       )
 

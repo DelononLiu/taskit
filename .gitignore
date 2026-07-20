@@ -22,4 +22,4 @@ backend/prisma/*.db-journal
 backend/.env
 
 runners/*/venv/
-runners/*/__pycache__/
+__pycache__/
