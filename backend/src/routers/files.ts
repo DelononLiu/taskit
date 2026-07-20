@@ -9,9 +9,11 @@ import { files } from '../db/schema.js'
 import { config } from '../config.js'
 
 const storage = multer.diskStorage({
-  destination: async (_req, _file, cb) => {
-    await fs.mkdir(config.uploadDir, { recursive: true })
-    cb(null, config.uploadDir)
+  destination: async (req: any, _file, cb) => {
+    const userId = req.user?.id ?? 1
+    const userDir = path.join(config.uploadDir, String(userId))
+    await fs.mkdir(userDir, { recursive: true })
+    cb(null, userDir)
   },
   filename: (_req, file, cb) => {
     const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`
