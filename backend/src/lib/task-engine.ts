@@ -1,5 +1,6 @@
 import { spawn } from 'child_process'
 import fs from 'fs/promises'
+import fsSync from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { eq } from 'drizzle-orm'
@@ -50,6 +51,19 @@ export async function executeTask(taskId: number): Promise<void> {
     // Runner 根目录（项目根下的 runners/）
     const RUNNERS_ROOT = path.resolve(__dirname, '../../../runners')
 
+    // 解析 runner 路径：内置优先，回落用户目录
+    function resolveRunnerScript(runnerName: string): string {
+      const builtin = path.join(RUNNERS_ROOT, runnerName, 'run.sh')
+      if (fsSync.existsSync(builtin)) return builtin
+
+      const userRunner = path.join(
+        require('os').homedir(), '.taskit', 'runner', runnerName, 'run.sh'
+      )
+      if (fsSync.existsSync(userRunner)) return userRunner
+
+      throw new Error(`Runner not found: ${runnerName} (checked built-in and ~/.taskit/runner/)`)
+    }
+
     // 创建临时目录
     taskDir = path.join(TASK_TEMP_DIR, `task_${taskId}`)
     await fs.mkdir(taskDir, { recursive: true })
@@ -59,7 +73,7 @@ export async function executeTask(taskId: number): Promise<void> {
 
     if (mod.runner) {
       // ── Runner-based execution: --input --output CLI ──
-      const runnerScript = path.join(RUNNERS_ROOT, mod.runner, 'run.sh')
+      const runnerScript = resolveRunnerScript(mod.runner)
 
       const cliArgs: string[] = [
         `--input`, `'${inputPath}'`,

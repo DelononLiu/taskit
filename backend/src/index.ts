@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import path from 'path'
 import fs from 'fs'
+import os from 'os'
 import { config } from './config.js'
 import { db, resolveDbPath } from './db/index.js'
 
@@ -66,8 +67,47 @@ app.get('/api/modules/model_compare/frameworks', optionalAuth, (_req, res) => {
   res.json([...builtinFrameworks, ...userFrameworks])
 })
 
+// ── 注册用户 runner ──
+function registerUserRunners() {
+  const userRunnerDir = path.join(os.homedir(), '.taskit', 'runner')
+  if (!fs.existsSync(userRunnerDir)) return
+
+  const entries = fs.readdirSync(userRunnerDir, { withFileTypes: true })
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+
+    const runnerDir = path.join(userRunnerDir, entry.name)
+    const runSh = path.join(runnerDir, 'run.sh')
+    if (!fs.existsSync(runSh)) continue
+
+    // 读取 config.json（可选）
+    const configPath = path.join(runnerDir, 'config.json')
+    let cfg: any = {}
+    if (fs.existsSync(configPath)) {
+      try { cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8')) } catch {}
+    }
+
+    const moduleKey = `user_${entry.name}`
+    if (MODULES[moduleKey]) continue  // 不覆盖同名模块
+
+    MODULES[moduleKey] = {
+      name: cfg.name || entry.name,
+      runner: entry.name,           // 目录名，task-engine 用于回落查找
+      source: 'user' as any,
+      description: cfg.description,
+      icon: cfg.icon,
+      parser: (output: any, _params: any) => output,
+    }
+
+    console.log(`  [runner] registered user runner: ${entry.name}`)
+  }
+}
+
 // ── 启动 ──
 async function main() {
+  // 注册外部 runner
+  registerUserRunners()
+
   // 确保上传目录存在
   const uploadDir = path.resolve(config.uploadDir)
   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
