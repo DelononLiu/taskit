@@ -10,40 +10,13 @@ Usage:
 
 import argparse
 import json
-import math
 import os
 import numpy as np
 
 
-# ── Tensor comparison metrics ──
-
-def cosine_similarity(a, b):
-    a_f = a.flatten().astype(np.float64)
-    b_f = b.flatten().astype(np.float64)
-    dot = np.dot(a_f, b_f)
-    na = np.linalg.norm(a_f)
-    nb = np.linalg.norm(b_f)
-    if na < 1e-12 or nb < 1e-12:
-        return 1.0 if na == nb else 0.0
-    return float(dot / (na * nb))
-
-
-def max_abs_error(a, b):
-    return float(np.max(np.abs(a.astype(np.float64) - b.astype(np.float64))))
-
-
-def mean_abs_error(a, b):
-    return float(np.mean(np.abs(a.astype(np.float64) - b.astype(np.float64))))
-
-
-def compute_snr(a, b):
-    a_f = a.astype(np.float64)
-    b_f = b.astype(np.float64)
-    signal = np.sum(a_f ** 2)
-    noise = np.sum((a_f - b_f) ** 2)
-    if noise < 1e-30:
-        return 100.0
-    return float(10 * math.log10(signal / noise))
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from compare import cosine_similarity, max_abs_error, mean_abs_error, compute_snr
 
 
 # ── Inference ──
