@@ -317,7 +317,7 @@ def main():
         baseline_results.append((meta, tensors, graph))
 
     # Run target framework if specified (single model + target framework = compare)
-    target_meta_extra = None
+    target_result = None  # (meta_list, tensors_dict) from target framework
     if args.target_framework and len(model_paths) == 1:
         target_fw = args.target_framework.lower()
         print(f"[onnx] comparing with target framework: {target_fw}")
@@ -327,73 +327,133 @@ def main():
         runner_sh = runner_map.get(target_fw)
         if runner_sh and os.path.exists(runner_sh):
             import subprocess, tempfile
-            with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as tmp:
-                tmp_out = tmp.name
+            with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as tmp_json, \
+                 tempfile.NamedTemporaryFile(suffix='.npz', delete=False) as tmp_npz:
+                tmp_out = tmp_json.name
+                tmp_npz_path = tmp_npz.name
             try:
-                cmd = f'bash {runner_sh} --input {model_paths[0]} --output {tmp_out}'
+                cmd = f'bash {runner_sh} --input {model_paths[0]} --output {tmp_out} --node-output {tmp_npz_path}'
                 ret = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=120)
                 if ret.returncode == 0 and os.path.exists(tmp_out):
                     with open(tmp_out) as f:
                         fw_data = json.load(f)
-                    target_meta_extra = fw_data.get('layers', [])
+                    fw_meta = fw_data.get('layers', [])
+                    # Load target framework tensors from npz
+                    fw_tensors = {}
+                    if os.path.exists(tmp_npz_path) and os.path.getsize(tmp_npz_path) > 0:
+                        fw_tensors = dict(np.load(tmp_npz_path, allow_pickle=True))
+                        # np.savez prefixes integer-like keys with 'arr_'; normalize
+                        fw_tensors = {k.replace('arr_', ''): v for k, v in fw_tensors.items()}
+                    target_result = (fw_meta, fw_tensors)
                 else:
                     print(f"[onnx] {target_fw} runner failed: {ret.stderr[:200]}")
             finally:
-                if os.path.exists(tmp_out):
-                    os.unlink(tmp_out)
+                for p in (tmp_out, tmp_npz_path):
+                    if os.path.exists(p):
+                        os.unlink(p)
         # Add more target frameworks here (tensorrt, etc.)
 
     has_baseline = len(baseline_results) > 0
     meta_b, tensors_b, graph_b = baseline_results[0]
 
-    if target_meta_extra is not None:
-        # Include both frameworks' layers in output (structural comparison)
-        fb = 'onnxruntime'
+    if target_result is not None:
+        # Actually compare ONNX Runtime tensors vs target framework tensors
+        target_meta_extra, target_tensors_by_idx = target_result
         ft = args.target_framework
-        merged_layers = []
-        for lb in meta_b:
-            # Find matching layer in target by index
-            merged = {
-                "layerName": lb["layerName"],
-                "layerType": lb["layerType"],
-                "inputShape": lb.get("inputShape", []),
-                "outputShape": lb.get("outputShape", []),
-                "metrics": [
-                    {"frameworkId": fb, "cosineSimilarity": 0, "maxAbsError": 0, "meanAbsError": 0, "snr": 0, "passed": False},
-                ],
-            }
-            merged_layers.append(merged)
-        # Also include target-only layers
-        for lt in target_meta_extra:
-            if not any(m["layerName"] == lt["layerName"] for m in merged_layers):
+
+        if target_tensors_by_idx:
+            # Build name→tensor map for target framework (OV may decompose ops differently)
+            # target_meta_extra[i] matches target_tensors_by_idx[str(i)]
+            ov_name_to_tensor = {}
+            for i, m in enumerate(target_meta_extra):
+                k = str(i)
+                if k in target_tensors_by_idx:
+                    ov_name_to_tensor[m['layerName']] = target_tensors_by_idx[k]
+
+            # Match ONNX layers to OV layers by ONNX node name, rebuilding
+            # both sides with contiguous indices so compare_layers aligns correctly.
+            # OV may split a fused ONNX op (e.g. Conv) into sub-ops like
+            # "node/WithoutBiases" + "node" (bias-add). We prefer the final
+            # bias-add output (exact name match) over decomposed sub-ops.
+            matched_meta_b = []
+            matched_meta_t = []
+            matched_arrs_b = {}
+            matched_arrs_t = {}
+            skipped = 0
+            for i, lb in enumerate(meta_b):
+                onnx_name = lb['layerName']
+                matched_name = None
+
+                # 1) Exact name match (OV keeps the same name for bias-add final output)
+                if onnx_name in ov_name_to_tensor:
+                    matched_name = onnx_name
+                else:
+                    # 2) Prefix match — OV adds suffixes like /WithoutBiases.
+                    #    Only accept if a non-/WithoutBiases variant exists
+                    #    (the bias-add output).  Don't fall back to /WithoutBiases
+                    #    because comparing Gemm+bias vs MatMul alone is misleading.
+                    candidates = [n for n in ov_name_to_tensor
+                                  if n == onnx_name or n.startswith(onnx_name + '/')]
+                    no_bias = [n for n in candidates if '/WithoutBiases' not in n]
+                    if no_bias:
+                        matched_name = no_bias[0]
+
+                if matched_name and matched_name in ov_name_to_tensor:
+                    idx = len(matched_meta_b)
+                    tv = ov_name_to_tensor[matched_name]
+                    matched_meta_b.append(lb)
+                    matched_meta_t.append({
+                        "layerName": lb["layerName"],
+                        "layerType": lb["layerType"],
+                        "inputShape": lb.get("inputShape", []),
+                        "outputShape": list(tv.shape),
+                    })
+                    matched_arrs_b[str(idx)] = tensors_b[str(i)]
+                    matched_arrs_t[str(idx)] = tv
+                else:
+                    skipped += 1
+
+            if skipped:
+                print(f"[onnx] warning: {skipped}/{len(meta_b)} layers could not be matched to {ft} outputs")
+
+            if matched_meta_b:
+                result = compare_layers(matched_meta_b, matched_arrs_b,
+                                        matched_meta_t, matched_arrs_t, ft)
+                output = {"status": "ok", "framework": f"onnx_vs_{ft}",
+                          "model": os.path.basename(model_paths[0]), **result}
+            else:
+                output = {
+                    "status": "ok",
+                    "framework": f"onnx_vs_{ft}",
+                    "model": os.path.basename(model_paths[0]),
+                    "overall": {"totalLayers": len(meta_b), "passedLayers": 0, "failedLayers": 0,
+                                "avgCosineSimilarity": 0, "maxAbsError": 0, "worstLayer": ""},
+                    "layers": [],
+                }
+        else:
+            # Fallback: structural-only (no tensors from target)
+            merged_layers = []
+            for lb in meta_b:
                 merged_layers.append({
-                    "layerName": lt["layerName"],
-                    "layerType": lt.get("layerType", ""),
-                    "inputShape": lt.get("inputShape", []),
-                    "outputShape": lt.get("outputShape", []),
+                    "layerName": lb["layerName"],
+                    "layerType": lb["layerType"],
+                    "inputShape": lb.get("inputShape", []),
+                    "outputShape": lb.get("outputShape", []),
                     "metrics": [
-                        {"frameworkId": ft, "cosineSimilarity": 0, "maxAbsError": 0, "meanAbsError": 0, "snr": 0, "passed": False},
+                        {"frameworkId": ft, "cosineSimilarity": 0, "maxAbsError": 0,
+                         "meanAbsError": 0, "snr": 0, "passed": False},
                     ],
                 })
-        graph_out = graph_b
-        if not graph_out and baseline_results[0][2]:
-            graph_out = baseline_results[0][2]
-        output = {
-            "status": "ok",
-            "framework": f"onnx_vs_{ft}",
-            "model": os.path.basename(model_paths[0]),
-            "overall": {
-                "totalLayers": len(merged_layers),
-                "passedLayers": 0,
-                "failedLayers": 0,
-                "avgCosineSimilarity": 0,
-                "maxAbsError": 0,
-                "worstLayer": "",
-            },
-            "layers": merged_layers,
-        }
-        if graph_out:
-            output["graph"] = graph_out
+            output = {
+                "status": "ok",
+                "framework": f"onnx_vs_{ft}",
+                "model": os.path.basename(model_paths[0]),
+                "overall": {"totalLayers": len(merged_layers), "passedLayers": 0, "failedLayers": 0,
+                            "avgCosineSimilarity": 0, "maxAbsError": 0, "worstLayer": ""},
+                "layers": merged_layers,
+            }
+        if graph_b:
+            output["graph"] = graph_b
     elif len(baseline_results) >= 2:
         # Two models: compare
         _, _, graph_b = baseline_results[0]

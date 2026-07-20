@@ -5,6 +5,7 @@ import { EmptyState } from '@/core/components/EmptyState'
 import { TaskFormModal } from '@/tasks/model_compare/TaskFormModal'
 import { useAppStore } from '@/stores/appStore'
 import { useTaskStore } from '@/stores/taskStore'
+import { cancelTask, retryTask } from '@/api/task'
 
 export default function TaskitPage() {
   const navigate = useNavigate()
@@ -48,6 +49,8 @@ export default function TaskitPage() {
         loading={tasksLoading}
         onNewTask={() => setModalOpen(true)}
         onDownloadReport={handleDownloadReport}
+        onCancelTask={async (id) => { await cancelTask(id); fetchTasks() }}
+        onRetryTask={async (id) => { await retryTask(id); fetchTasks() }}
       />
       <TaskFormModal
         open={modalOpen}
