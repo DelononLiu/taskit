@@ -103,6 +103,7 @@ export async function getTaskHistory(page = 1, limit = 20): Promise<any[]> {
       progress: t.progress,
       createdAt: dateStr,
       completedAt: t.completedAt,
+      overall: t.overall || null,
     }
   })
 }

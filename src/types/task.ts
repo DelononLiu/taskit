@@ -14,6 +14,15 @@ export interface ComparisonTask {
   error?: string
   baseline: FrameworkResult | null
   comparisons: FrameworkResult[]
+  /** 精度摘要（从列表 API 的 overall 字段映射） */
+  overall?: {
+    totalLayers: number
+    passedLayers: number
+    failedLayers: number
+    avgCosineSimilarity: number
+    maxAbsError: number
+    worstLayer: string
+  } | null
 }
 
 export interface CreateTaskParams {
