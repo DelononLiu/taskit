@@ -198,8 +198,8 @@ export function TaskTable(props: TaskTableProps) {
                         suspicious={
                           task.status === 'completed' &&
                           task.overall != null &&
-                          task.overall.totalLayers > 0 &&
-                          task.overall.avgCosineSimilarity < 0.9999
+                          (task.overall.totalLayers === 0 ||
+                           task.overall.avgCosineSimilarity < 0.9999)
                         }
                       />
                     </td>

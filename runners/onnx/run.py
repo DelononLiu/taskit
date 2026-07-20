@@ -332,7 +332,7 @@ def main():
                 tmp_out = tmp_json.name
                 tmp_npz_path = tmp_npz.name
             try:
-                cmd = f'bash {runner_sh} --input {model_paths[0]} --output {tmp_out} --node-output {tmp_npz_path}'
+                cmd = f'bash {runner_sh} --input {model_paths[0]} --output {tmp_out} --node-output {tmp_npz_path} --batch-size {args.batch_size}'
                 ret = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=120)
                 if ret.returncode == 0 and os.path.exists(tmp_out):
                     with open(tmp_out) as f:
