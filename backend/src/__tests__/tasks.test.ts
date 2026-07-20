@@ -151,3 +151,68 @@ describe('GET /api/tasks', () => {
     expect(res.body.total).toBe(2)
   })
 })
+
+describe('GET /api/tasks/:id/report', () => {
+  it('returns 400 for invalid id', async () => {
+    const app = createApp()
+    const res = await request(app).get('/api/tasks/abc/report')
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 404 for nonexistent task', async () => {
+    mockSelectChain.get.mockReturnValue(undefined)
+    const app = createApp()
+    const res = await request(app).get('/api/tasks/999/report')
+    expect(res.status).toBe(404)
+  })
+
+  it('returns html for completed task', async () => {
+    mockSelectChain.get.mockReturnValue({
+      id: 1,
+      module: 'model_compare',
+      status: 'completed',
+      progress: 100,
+      params: '{"frameworks":["tensorrt"]}',
+      fileIds: '["file-1"]',
+      result: JSON.stringify({
+        framework: 'onnx_vs_openvino',
+        overall: { totalLayers: 5, passedLayers: 4, failedLayers: 1, avgCosineSimilarity: 0.9876, maxAbsError: 0.05, worstLayer: 'Conv_3' },
+        layers: [
+          { layerName: 'Conv_0', layerType: 'Conv', inputShape: [1,3,224,224], outputShape: [1,64,112,112], metrics: [{ frameworkId: 'onnx_fp32', cosineSimilarity: 0.9998, maxAbsError: 0.001, meanAbsError: 0.0003, snr: 45, passed: true }] },
+        ],
+      }),
+      error: null,
+      createdAt: '2025-01-15',
+      completedAt: '2025-01-15',
+      userId: 1,
+    })
+
+    const app = createApp()
+    const res = await request(app).get('/api/tasks/1/report')
+    expect(res.status).toBe(200)
+    expect(res.headers['content-type']).toContain('text/html')
+    expect(res.text).toContain('Conv_0')
+    expect(res.text).toContain('0.9998')
+  })
+
+  it('returns 400 for non-completed task', async () => {
+    mockSelectChain.get.mockReturnValue({
+      id: 2,
+      module: 'model_compare',
+      status: 'running',
+      progress: 50,
+      params: '{}',
+      fileIds: '[]',
+      result: null,
+      error: null,
+      createdAt: '2025-01-15',
+      completedAt: null,
+      userId: 1,
+    })
+
+    const app = createApp()
+    const res = await request(app).get('/api/tasks/2/report')
+    expect(res.status).toBe(400)
+    expect(res.body.error).toContain('not completed')
+  })
+})

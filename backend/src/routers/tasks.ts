@@ -4,6 +4,7 @@ import { db } from '../db/index.js'
 import { tasks, files } from '../db/schema.js'
 import { getModule } from '../tasks/registry.js'
 import { executeTask, cancelTask } from '../lib/task-engine.js'
+import { generateReportHtml } from '../lib/report.js'
 
 const router = Router()
 
@@ -77,6 +78,13 @@ router.get('/', async (req: Request, res: Response) => {
     res.json({
       tasks: taskList.map((t: any) => {
         const ids: string[] = (() => { try { return JSON.parse(t.fileIds || '[]') } catch { return [] } })()
+        let overall = null
+        if (t.result) {
+          try {
+            const r = typeof t.result === 'string' ? JSON.parse(t.result) : t.result
+            overall = r.overall || null
+          } catch {}
+        }
         return {
           id: t.id,
           module: t.module,
@@ -86,6 +94,7 @@ router.get('/', async (req: Request, res: Response) => {
           completedAt: t.completedAt ?? null,
           params: t.params,
           fileNames: ids.map(id => fileMap[id]).filter(Boolean),
+          overall,
         }
       }),
       total,
@@ -172,6 +181,25 @@ router.post('/:id/retry', async (req: Request, res: Response) => {
       status: newTask.status,
       createdAt: newTask.createdAt,
     })
+  } catch (e: any) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// 下载精度报告
+router.get('/:id/report', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id)
+    if (isNaN(id)) return res.status(400).json({ error: 'invalid id' })
+    const task = db.select().from(tasks).where(eq(tasks.id, id)).get()
+    if (!task) return res.status(404).json({ error: 'not found' })
+    if (task.status !== 'completed') {
+      return res.status(400).json({ error: 'task not completed yet' })
+    }
+
+    const html = generateReportHtml(task)
+    res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    res.send(html)
   } catch (e: any) {
     res.status(500).json({ error: e.message })
   }

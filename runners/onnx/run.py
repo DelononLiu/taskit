@@ -434,8 +434,8 @@ def main():
         json.dump(output, f, indent=2)
 
     # Write node-output if requested
-    if args.node_output and len(all_results) > 0:
-        _, _, tensors, _ = all_results[0]
+    if args.node_output and len(baseline_results) > 0:
+        _, tensors, _ = baseline_results[0]
         if tensors:
             np.savez_compressed(args.node_output, **tensors)
 
